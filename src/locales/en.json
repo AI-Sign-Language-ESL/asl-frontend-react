@@ -1,0 +1,164 @@
+{
+  "navbar": {
+    "brand": "TAFAHOM",
+    "home": "Home",
+    "translator": "Sign Translator",
+    "generator": "Sign Generator",
+    "meetings": "Meetings",
+    "dataset": "Dataset",
+    "pricing": "Pricing",
+    "login": "Login",
+    "signup": "Sign Up"
+  },
+  "hero": {
+    "title_part1": "Better communication",
+    "title_part2": "Stronger connections",
+    "subtitle": "Tafahom helps you understand, express, and connect with people—anytime, anywhere.",
+    "button": "Start your journey",
+    "feature1": "Smart Conversations",
+    "feature2": "Meaningful Connections",
+    "feature3": "Safe & Trusted",
+    "card1": "Let's understand each other better.",
+    "card2_bold": "People are connecting",
+    "card2_light": "with Tafahom today"
+  },
+  "home": {
+    "version": "Version 2.0 is live",
+    "world_where": "A World Where",
+    "no_one_left_behind": "No One is Left Behind.",
+    "world_subtitle": "Experience the first real-time, bidirectional AI translator for Egyptian Sign Language. Empowering millions to communicate independently, accurately, and naturally.",
+    "start_translating": "Start Translating",
+    "contribute": "Contribute",
+    "silent_struggle": "The Silent Struggle",
+    "silent_struggle_desc": "Deaf and hard-of-hearing individuals in Egypt struggle to communicate effectively in hospitals, schools, workplaces, government offices, and public services.",
+    "problem1_title": "Reliance on alternatives",
+    "problem1_desc": "Forced to rely on lip-reading or complex writing in daily interactions.",
+    "problem2_title": "Lack of ESL Tools",
+    "problem2_desc": "A severe shortage of tools tailored to the Egyptian Sign Language dialect.",
+    "problem3_title": "Privacy Issues",
+    "problem3_desc": "Constant need for human interpreters compromises personal independence.",
+    "problem4_title": "Social Isolation",
+    "problem4_desc": "Communication barriers lead to marginalization in schools and workplaces.",
+    "ecosystem_title": "A Complete Ecosystem",
+    "ecosystem_desc": "We built a powerful pipeline that moves seamlessly from visual capture to spoken word, and vice versa.",
+    "solution1_title": "EASL-10K Dataset",
+    "solution1_desc": "The largest open-source dataset for Egyptian Sign Language with over 10,000 highly accurate samples.",
+    "solution2_title": "ST-GCN Recognition",
+    "solution2_desc": "State-of-the-art Spatial-Temporal Graph Convolutional Networks precisely track hand and body skeleton points.",
+    "solution3_title": "LLaMA-3 Translation",
+    "solution3_desc": "Context-aware gloss-to-text translation ensuring grammatically correct spoken Arabic output.",
+    "solution4_title": "EgypTalk Speech System",
+    "solution4_desc": "Natural-sounding Egyptian voice generation converting translated text into human-like audio.",
+    "solution5_title": "Cross-platform",
+    "solution5_desc": "Seamless deployment across web, mobile, and desktop. Always accessible when you need it most.",
+    "available_title": "Available wherever you are",
+    "download_apple": "Download on the",
+    "get_google": "GET IT ON"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "account": "Account",
+      "appearance": "Appearance",
+      "accessibility": "Accessibility",
+      "language": "Language",
+      "notifications": "Notifications",
+      "billing": "Billing"
+    },
+    "language": {
+      "title": "Language Settings",
+      "desc": "Choose your preferred language.",
+      "english": "English",
+      "arabic": "Arabic (العربية)"
+    },
+    "profile": {
+      "display_name": "Display Name",
+      "email": "Email Address"
+    },
+    "account": {
+      "security_section": "Security & Password",
+      "change_password": "Change Password",
+      "two_factor": "Two-Factor Authentication",
+      "two_factor_desc": "Add an extra layer of security to your account.",
+      "delete_account": "Delete Account",
+      "delete_warning": "Once you delete your account, there is no going back. Please be certain."
+    },
+    "appearance": {
+      "theme_section": "Theme Preference",
+      "theme_desc": "Select how Tafahom looks for you.",
+      "light": "Light Mode",
+      "dark": "Dark Mode",
+      "system": "System Default",
+      "accent_section": "Accent Color",
+      "accent_desc": "Choose your primary UI color."
+    },
+    "accessibility": {
+      "high_contrast": "High Contrast Mode",
+      "high_contrast_desc": "Increase contrast for better readability.",
+      "autoplay": "Auto-play 3D Avatars",
+      "autoplay_desc": "Automatically play sign generator animations."
+    },
+    "save": {
+      "unsaved": "You have unsaved changes.",
+      "discard": "Discard",
+      "save_btn": "Save"
+    }
+  },
+  "pricing": {
+    "title": "Simple, transparent pricing",
+    "subtitle": "We believe accessibility should be free. Advanced tools are available for professionals who need more processing power.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save": "Save 20%",
+    "most_popular": "Most Popular",
+    "contact_sales": "Contact Sales",
+    "get_started": "Get Started",
+    "per_month": "mo",
+    "per_year": "year",
+    "free": { "name": "Free", "desc": "Essential communication for everyone.", "f1": "Basic translation (Text & Voice)", "f2": "Standard 3D Avatar Quality", "f3": "Limited daily recognition", "f4": "Community Support" },
+    "pro": { "name": "Pro", "desc": "For professionals and daily active users.", "f1": "Everything in Free", "f2": "Unlimited tracking", "f3": "HD 3D Avatar rendering", "f4": "EgypTalk Premium Voices", "f5": "Priority Support" },
+    "enterprise": { "name": "Enterprise", "desc": "Custom solutions for hospitals & schools.", "f1": "Dedicated API Access", "f2": "Custom vocabulary", "f3": "On-premise deployment", "f4": "24/7 Phone Support", "f5": "SLA Guarantee" }
+  },
+  "dataset": {
+    "title": "Contribute to EASL-10K",
+    "subtitle": "Help us build the largest open-source dataset for Egyptian Sign Language. Your contribution directly improves the AI's accuracy.",
+    "steps": { "step1": "Record / Upload", "step2": "Label Data", "step3": "Submit" },
+    "upload_title": "Upload your recording",
+    "upload_desc": "Ensure you are in a well-lit area and your hands are clearly visible in the frame.",
+    "drop_click": "Drag & drop or Click to browse",
+    "label_title": "Label the sign",
+    "label_desc": "What word or phrase did you just sign in Egyptian Sign Language?",
+    "label_placeholder": "e.g. Hello, Doctor, Thank you",
+    "submit_title": "Ready to Submit!",
+    "submit_desc": "Thank you for your contribution. Once verified, it will be added to the EASL dataset.",
+    "back": "Back",
+    "continue": "Continue",
+    "submit_btn": "Submit Recording"
+  },
+  "generator": {
+    "placeholder": "Enter text to translate into sign language...",
+    "generate": "Generate"
+  },
+  "translator": {
+    "waiting": "Waiting for input...",
+    "translating": "Translating...",
+    "active": "ST-GCN Tracking Active",
+    "offline": "Camera Offline",
+    "start": "Start Tracking",
+    "stop": "Stop Tracking",
+    "cam_off": "Camera is currently off",
+    "live": "Live Translation",
+    "log": "Detection Log",
+    "no_detect": "No detections yet"
+  },
+  "assistant": {
+    "title": "TAFAHOM Assistant",
+    "placeholder": "Type a message...",
+    "welcome": "Hi there! I'm your TAFAHOM assistant. How can I help you?",
+    "bot_response": "I'm a beta demo bot right now, but soon I'll be able to help you deeply with TAFAHOM integrations!",
+    "sug1": "How does it work?",
+    "sug2": "Pricing plans",
+    "sug3": "API access"
+  }
+}
