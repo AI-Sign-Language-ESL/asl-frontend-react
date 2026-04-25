@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Shield, Bell, Eye, Accessibility,
@@ -8,7 +8,7 @@ import {
   Check, Loader2, AlertCircle, Receipt, Plus,
   Download, Building, Zap, Crown, Star, ArrowUpRight,
   Calendar, Clock, FileText, Video, Users,
-  MessageSquare, Video as VideoIcon, Webhook, LogOut
+  MessageSquare, Video as VideoIcon, Webhook, LogOut, Coins
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
@@ -28,6 +28,34 @@ const Settings = () => {
     email: user?.email || '',
   });
 
+  const [tokens, setTokens] = useState({
+    available: 150,
+    nextRecharge: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    monthlyAllowance: 200,
+    used: 50,
+  });
+
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const diff = tokens.nextRecharge.getTime() - Date.now();
+      if (diff > 0) {
+        return {
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((diff / (1000 * 60)) % 60),
+          seconds: Math.floor((diff / 1000) % 60),
+        };
+      }
+      return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
+    return () => clearInterval(timer);
+  }, [tokens.nextRecharge]);
+
   const [billingInfo, setBillingInfo] = useState({
     plan: 'free',
     billingCycle: 'monthly',
@@ -39,6 +67,18 @@ const Settings = () => {
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showAddCardModal, setShowAddCardModal] = useState(false);
+
+  const [accessibilitySettings, setAccessibilitySettings] = useState({
+    textSize: 'medium',
+    highContrast: false,
+    reduceMotion: false,
+    animationSpeed: 1,
+    autoPlayCaptions: true,
+    hapticFeedback: true,
+    preferredVariant: 'EASL',
+    keyboardShortcuts: true,
+    screenReaderOptimized: false,
+  });
 
   const [notificationSettings, setNotificationSettings] = useState({
     email: {
@@ -285,6 +325,88 @@ const Settings = () => {
                   <div className="text-center">
                     <p className="text-2xl font-bold text-success">15</p>
                     <p className="text-xs text-text-muted">Contributions</p>
+                  </div>
+                </div>
+
+                {/* Token Balance Card */}
+                <div className="glass rounded-3xl p-6 border border-white/10 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                        <Coins className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-text-main">Token Balance</h3>
+                        <p className="text-xs text-text-muted">Monthly allowance</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-success/20 text-success text-xs font-medium flex items-center gap-1">
+                      <Zap className="w-3 h-3" /> Active
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Available</p>
+                      <p className="text-2xl font-bold text-primary">{tokens.available}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Used</p>
+                      <p className="text-2xl font-bold text-text-main">{tokens.used}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Monthly Allowance</p>
+                      <p className="text-2xl font-bold text-text-main">{tokens.monthlyAllowance}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Next Recharge</p>
+                      <p className="text-sm font-semibold text-text-main">
+                        {tokens.nextRecharge.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mb-6">
+                    <div className="flex justify-between text-xs text-text-muted mb-2">
+                      <span>Usage this month</span>
+                      <span>{Math.round((tokens.used / tokens.monthlyAllowance) * 100)}%</span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500"
+                        style={{ width: `${(tokens.used / tokens.monthlyAllowance) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Countdown Timer */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-text-muted">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-sm">Next recharge in</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-bold text-text-main">{timeLeft.days}</span>
+                        <span className="text-[10px] text-text-muted">Days</span>
+                      </div>
+                      <span className="text-text-muted">:</span>
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-bold text-text-main">{String(timeLeft.hours).padStart(2, '0')}</span>
+                        <span className="text-[10px] text-text-muted">Hours</span>
+                      </div>
+                      <span className="text-text-muted">:</span>
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-bold text-text-main">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                        <span className="text-[10px] text-text-muted">Min</span>
+                      </div>
+                      <span className="text-text-muted">:</span>
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-bold text-primary">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                        <span className="text-[10px] text-text-muted">Sec</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -769,13 +891,198 @@ const Settings = () => {
               </div>
             )}
 
-            {['appearance', 'accessibility'].includes(activeTab) && (
+            {activeTab === 'accessibility' && (
               <div className="flex flex-col h-full gap-8">
                 <header className="shrink-0">
-                  <h1 className="text-2xl font-bold text-text-main mb-2">{tabs.find(t => t.id === activeTab)?.name}</h1>
+                  <h1 className="text-2xl font-bold text-text-main mb-2">{t('settings.tabs.accessibility')}</h1>
+                  <p className="text-sm text-text-muted max-w-xl">Customize your experience for better accessibility.</p>
                 </header>
-                <div className="flex-1 flex items-center justify-center border-2 border-dashed border-white/5 rounded-3xl opacity-30">
-                  <p className="text-sm font-medium">Compact module view</p>
+
+                {/* Text Size */}
+                <section className="flex flex-col gap-4">
+                  <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" />
+                    Text Size
+                  </h2>
+                  <div className="grid grid-cols-4 gap-3">
+                    {['small', 'medium', 'large', 'xlarge'].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setAccessibilitySettings(prev => ({ ...prev, textSize: size }))}
+                        className={classNames(
+                          "p-4 rounded-xl border transition-all text-center",
+                          accessibilitySettings.textSize === size
+                            ? "bg-primary/10 border-primary shadow-lg shadow-primary/10"
+                            : "glass border-white/10 hover:border-white/20"
+                        )}
+                      >
+                        <span className={classNames(
+                          "font-semibold text-text-main capitalize",
+                          size === 'small' && "text-sm",
+                          size === 'medium' && "text-base",
+                          size === 'large' && "text-lg",
+                          size === 'xlarge' && "text-xl"
+                        )}>
+                          {size === 'xlarge' ? 'XL' : size}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Visual Settings */}
+                <section className="flex flex-col gap-4">
+                  <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                    <Sun className="w-4 h-4 text-primary" />
+                    Visual
+                  </h2>
+                  <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+                    <SettingToggle
+                      title="High Contrast"
+                      description="Increase contrast for better visibility"
+                      checked={accessibilitySettings.highContrast}
+                      onChange={(val) => setAccessibilitySettings(prev => ({ ...prev, highContrast: val }))}
+                    />
+                    <div className="h-px bg-white/5" />
+                    <SettingToggle
+                      title="Reduce Motion"
+                      description="Minimize animations and transitions"
+                      checked={accessibilitySettings.reduceMotion}
+                      onChange={(val) => setAccessibilitySettings(prev => ({ ...prev, reduceMotion: val }))}
+                    />
+                    <div className="h-px bg-white/5" />
+                    <SettingToggle
+                      title="Auto-Play Captions"
+                      description="Show text overlay on translations"
+                      checked={accessibilitySettings.autoPlayCaptions}
+                      onChange={(val) => setAccessibilitySettings(prev => ({ ...prev, autoPlayCaptions: val }))}
+                    />
+                  </div>
+                </section>
+
+                {/* Animation Speed */}
+                <section className="flex flex-col gap-4">
+                  <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-primary" />
+                    Animation Speed
+                  </h2>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[0.5, 1, 1.5, 2].map((speed) => (
+                      <button
+                        key={speed}
+                        onClick={() => setAccessibilitySettings(prev => ({ ...prev, animationSpeed: speed }))}
+                        className={classNames(
+                          "p-4 rounded-xl border transition-all text-center",
+                          accessibilitySettings.animationSpeed === speed
+                            ? "bg-primary/10 border-primary shadow-lg shadow-primary/10"
+                            : "glass border-white/10 hover:border-white/20"
+                        )}
+                      >
+                        <span className="text-lg font-bold text-text-main">{speed}x</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Sign Language Settings */}
+                <section className="flex flex-col gap-4">
+                  <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                    <Accessibility className="w-4 h-4 text-primary" />
+                    Sign Language
+                  </h2>
+                  <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+                    <SettingToggle
+                      title="Haptic Feedback"
+                      description="Vibrate on sign detection"
+                      checked={accessibilitySettings.hapticFeedback}
+                      onChange={(val) => setAccessibilitySettings(prev => ({ ...prev, hapticFeedback: val }))}
+                    />
+                    <div className="h-px bg-white/5" />
+                    <SettingToggle
+                      title="Keyboard Shortcuts"
+                      description="Enable keyboard navigation"
+                      checked={accessibilitySettings.keyboardShortcuts}
+                      onChange={(val) => setAccessibilitySettings(prev => ({ ...prev, keyboardShortcuts: val }))}
+                    />
+                    <div className="h-px bg-white/5" />
+                    <SettingToggle
+                      title="Screen Reader Optimized"
+                      description="Optimize for assistive technology"
+                      checked={accessibilitySettings.screenReaderOptimized}
+                      onChange={(val) => setAccessibilitySettings(prev => ({ ...prev, screenReaderOptimized: val }))}
+                    />
+                  </div>
+                </section>
+
+                {/* Preferred Variant */}
+                <section className="flex flex-col gap-4">
+                  <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-primary" />
+                    Preferred Variant
+                  </h2>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['ASL', 'EASL', 'Mixed'].map((variant) => (
+                      <button
+                        key={variant}
+                        onClick={() => setAccessibilitySettings(prev => ({ ...prev, preferredVariant: variant }))}
+                        className={classNames(
+                          "p-4 rounded-xl border transition-all text-center",
+                          accessibilitySettings.preferredVariant === variant
+                            ? "bg-primary/10 border-primary shadow-lg shadow-primary/10"
+                            : "glass border-white/10 hover:border-white/20"
+                        )}
+                      >
+                        <span className="text-lg font-semibold text-text-main">{variant}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Save Button */}
+                <div className="flex justify-end pt-4 pb-8">
+                  <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-secondary text-white text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
+                    <Save className="w-3.5 h-3.5" />
+                    Save Preferences
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'appearance' && (
+              <div className="flex flex-col h-full gap-8">
+                <header className="shrink-0">
+                  <h1 className="text-2xl font-bold text-text-main mb-2">Appearance</h1>
+                  <p className="text-sm text-text-muted max-w-xl">Customize how the app looks.</p>
+                </header>
+
+                {/* Theme */}
+                <section className="flex flex-col gap-4">
+                  <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-primary" />
+                    Theme
+                  </h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button className="p-4 rounded-xl border bg-primary/10 border-primary shadow-lg">
+                      <div className="flex items-center gap-3">
+                        <Sun className="w-5 h-5 text-primary" />
+                        <span className="font-semibold text-text-main">Light</span>
+                      </div>
+                    </button>
+                    <button className="p-4 rounded-xl border glass border-white/10">
+                      <div className="flex items-center gap-3">
+                        <Moon className="w-5 h-5 text-text-muted" />
+                        <span className="font-semibold text-text-main">Dark</span>
+                      </div>
+                    </button>
+                  </div>
+                </section>
+
+                {/* Save Button */}
+                <div className="flex justify-end pt-4 pb-8">
+                  <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-secondary text-white text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
+                    <Save className="w-3.5 h-3.5" />
+                    Save Preferences
+                  </button>
                 </div>
               </div>
             )}
@@ -806,6 +1113,31 @@ const NotificationToggle = ({ title, description, checked, onChange, disabled })
           "relative w-12 h-7 rounded-full transition-all shrink-0",
           checked ? "bg-primary" : "bg-white/20",
           disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <span
+          className={classNames(
+            "absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all",
+            checked ? "left-6" : "left-1"
+          )}
+        />
+      </button>
+    </div>
+  );
+};
+
+const SettingToggle = ({ title, description, checked, onChange }) => {
+  return (
+    <div className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+      <div className="flex-1 min-w-0">
+        <h4 className="font-medium text-sm text-text-main">{title}</h4>
+        <p className="text-xs text-text-muted mt-0.5">{description}</p>
+      </div>
+      <button
+        onClick={() => onChange(!checked)}
+        className={classNames(
+          "relative w-12 h-7 rounded-full transition-all shrink-0",
+          checked ? "bg-primary" : "bg-white/20"
         )}
       >
         <span

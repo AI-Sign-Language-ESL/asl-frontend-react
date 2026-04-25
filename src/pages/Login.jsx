@@ -17,9 +17,12 @@ const Login = () => {
   const [verificationEmail, setVerificationEmail] = useState('');
 
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
+    confirm_password: '',
   });
 
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
@@ -35,9 +38,12 @@ const Login = () => {
 
     try {
       await register({
-        name: formData.name,
+        username: formData.username,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         email: formData.email,
         password: formData.password,
+        confirm_password: formData.confirm_password,
       });
       setVerificationEmail(formData.email);
       setStep('verify');
@@ -125,6 +131,14 @@ const Login = () => {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6 bg-bg-main relative overflow-hidden">
+      {/* Arabic Pattern Background */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none" 
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-bg-main/80 via-bg-main/60 to-bg-main/80 pointer-events-none" />
+      
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />
 
@@ -182,13 +196,42 @@ const Login = () => {
 
                   <form className="space-y-5" onSubmit={isLogin ? handleLogin : handleRegister}>
                     {!isLogin && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-text-muted mb-2">First Name</label>
+                          <input
+                            type="text"
+                            placeholder="Mohamed"
+                            value={formData.first_name}
+                            onChange={handleChange('first_name')}
+                            required
+                            disabled={loading}
+                            className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-muted mb-2">Last Name</label>
+                          <input
+                            type="text"
+                            placeholder="Amir"
+                            value={formData.last_name}
+                            onChange={handleChange('last_name')}
+                            required
+                            disabled={loading}
+                            className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {!isLogin && (
                       <div>
-                        <label className="block text-sm font-medium text-text-muted mb-2">Full Name</label>
+                        <label className="block text-sm font-medium text-text-muted mb-2">Username</label>
                         <input
                           type="text"
-                          placeholder="Mohamed Amir"
-                          value={formData.name}
-                          onChange={handleChange('name')}
+                          placeholder="mohamed_amir"
+                          value={formData.username}
+                          onChange={handleChange('username')}
                           required
                           disabled={loading}
                           className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
@@ -242,6 +285,27 @@ const Login = () => {
                         </div>
                       )}
                     </div>
+
+                    {!isLogin && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-medium text-text-muted">Confirm Password</label>
+                        </div>
+                        <div className="relative flex items-center">
+                          <Lock className="absolute left-4 w-5 h-5 text-text-muted pointer-events-none" />
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            value={formData.confirm_password}
+                            onChange={handleChange('confirm_password')}
+                            placeholder="••••••••"
+                            required
+                            minLength={6}
+                            disabled={loading}
+                            className="w-full bg-bg-card border border-border-subtle rounded-xl pl-12 pr-12 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     <button
                       type="submit"
