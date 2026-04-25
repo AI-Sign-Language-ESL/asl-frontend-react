@@ -1,38 +1,76 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import Webcam from 'react-webcam';
-import { Volume2, Power, History, Activity, CheckCircle2 } from 'lucide-react';
+import { Volume2, Power, History, Activity, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
+import { translatorService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+
+const dataURLtoBlob = (dataurl) => {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new Blob([u8arr], { type: mime });
+};
 
 const Translator = () => {
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuth();
   const [isActive, setIsActive] = useState(false);
   const [logs, setLogs] = useState([]);
   const [currentTextKey, setCurrentTextKey] = useState("translator.waiting");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const webcamRef = useRef(null);
 
-  // Mock detection simulation
+  const captureAndSend = async (videoBlob) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await translatorService.translate(videoBlob);
+      const { text, confidence } = response.data;
+      setCurrentTextKey(text);
+      setLogs(prev => [
+        { time: new Date().toLocaleTimeString(), sign: text, confidence },
+        ...prev
+      ].slice(0, 15));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Translation failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let interval;
-    if (isActive) {
+    if (isActive && webcamRef.current) {
       setCurrentTextKey("translator.translating");
       interval = setInterval(() => {
-        const signs = ["Hello", "How are you", "Thank you", "I need help", "Emergency", "Doctor"];
-        const randomSign = signs[Math.floor(Math.random() * signs.length)];
-        const confidence = (Math.random() * 20 + 80).toFixed(1); // 80-100%
-        
-        setCurrentTextKey(randomSign);
-        setLogs(prev => [
-          { time: new Date().toLocaleTimeString(), sign: randomSign, confidence },
-          ...prev
-        ].slice(0, 15)); // keep last 15
+        if (webcamRef.current) {
+          const screenshot = webcamRef.current.getScreenshot();
+          if (screenshot) {
+            const blob = dataURLtoBlob(screenshot);
+            captureAndSend(blob);
+          }
+        }
       }, 3000);
     } else {
       setCurrentTextKey("translator.waiting");
     }
     return () => clearInterval(interval);
   }, [isActive]);
+
+  const handleSpeak = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      speechSynthesis.speak(utterance);
+    }
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] gap-6 lg:flex-row pb-6">
@@ -46,11 +84,14 @@ const Translator = () => {
             <span className="font-semibold text-sm tracking-wide text-text-main">
               {isActive ? t('translator.active') : t('translator.offline')}
             </span>
+            {loading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
           </div>
           <button 
             onClick={() => setIsActive(!isActive)}
+            disabled={!isAuthenticated}
             className={classNames(
               "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all",
+              !isAuthenticated && "opacity-50 cursor-not-allowed",
               isActive ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" : "bg-primary text-white hover:bg-secondary shadow-[0_0_15px_rgba(59,130,246,0.3)]"
             )}
           >
@@ -61,6 +102,13 @@ const Translator = () => {
 
         {/* Camera View */}
         <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
+          {error && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-500 text-sm">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
+
           {isActive ? (
             <>
               <Webcam 
@@ -96,6 +144,9 @@ const Translator = () => {
             <div className="text-text-muted flex flex-col items-center gap-4">
               <Activity className="w-16 h-16 opacity-20" />
               <p>{t('translator.cam_off')}</p>
+              {!isAuthenticated && (
+                <a href="/login" className="text-primary hover:underline text-sm">Sign in to translate</a>
+              )}
             </div>
           )}
         </div>
@@ -109,7 +160,11 @@ const Translator = () => {
           <div className="absolute -inset-2 bg-gradient-to-r from-primary/10 to-secondary/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="flex justify-between items-start mb-6 z-10">
             <h3 className="font-semibold text-text-muted text-sm uppercase tracking-wider">{t('translator.live')}</h3>
-            <button className="p-2 rounded-full bg-bg-card hover:bg-bg-card/80 text-text-main transition-colors cursor-pointer group/btn" disabled={!isActive}>
+            <button
+              onClick={() => !currentTextKey.startsWith('translator.') && handleSpeak(currentTextKey)}
+              className="p-2 rounded-full bg-bg-card hover:bg-bg-card/80 text-text-main transition-colors cursor-pointer group/btn disabled:opacity-50"
+              disabled={currentTextKey.startsWith('translator.')}
+            >
               <Volume2 className="w-5 h-5 group-hover/btn:text-primary transition-colors" />
             </button>
           </div>

@@ -1,15 +1,94 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { UploadCloud, CheckCircle2, Tag, Video } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UploadCloud, CheckCircle2, Tag, Video, Loader2, X, AlertCircle } from 'lucide-react';
 import classNames from 'classnames';
+import { datasetService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Dataset = () => {
+  const { isAuthenticated } = useAuth();
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [file, setFile] = useState(null);
+  const [label, setLabel] = useState('');
+  const [dragActive, setDragActive] = useState(false);
+
   const steps = [
     { id: 1, title: "Record / Upload", icon: <Video className="w-5 h-5" /> },
     { id: 2, title: "Label Data", icon: <Tag className="w-5 h-5" /> },
     { id: 3, title: "Submit", icon: <CheckCircle2 className="w-5 h-5" /> }
   ];
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) validateAndSetFile(droppedFile);
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) validateAndSetFile(selectedFile);
+  };
+
+  const validateAndSetFile = (selectedFile) => {
+    const validTypes = ['video/mp4', 'video/webm'];
+    const maxSize = 50 * 1024 * 1024;
+
+    if (!validTypes.includes(selectedFile.type)) {
+      setError('Please upload MP4 or WebM files only.');
+      return;
+    }
+    if (selectedFile.size > maxSize) {
+      setError('File size must be under 50MB.');
+      return;
+    }
+    setError('');
+    setFile(selectedFile);
+    setStep(2);
+  };
+
+  const handleSubmitDataset = async () => {
+    if (!isAuthenticated) {
+      setError('Please sign in to contribute.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('video', file);
+      formData.append('label', label);
+
+      await datasetService.upload(formData);
+      setStep(3);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Upload failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setStep(1);
+    setFile(null);
+    setLabel('');
+    setError('');
+  };
 
   return (
     <div className="max-w-4xl mx-auto w-full flex flex-col gap-12 pb-20">
@@ -65,9 +144,27 @@ const Dataset = () => {
                 </div>
                 <h2 className="text-2xl font-semibold">Upload your recording</h2>
                 <p className="text-text-muted max-w-md">Ensure you are in a well-lit area and your hands are clearly visible in the frame.</p>
-                <div className="w-full max-w-md h-40 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center hover:bg-white/5 hover:border-primary/50 transition-colors cursor-pointer group mt-4">
-                  <span className="font-medium text-text-muted group-hover:text-white transition-colors">Drag & drop or Click to browse</span>
-                  <span className="text-xs text-text-muted/60 mt-2">MP4 or WebM, Max 50MB</span>
+                <div
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  className={classNames(
+                    "w-full max-w-md h-40 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-colors cursor-pointer group mt-4",
+                    dragActive ? "border-primary bg-primary/10" : "border-white/20 hover:bg-white/5 hover:border-primary/50"
+                  )}
+                >
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="video-upload"
+                  />
+                  <label htmlFor="video-upload" className="cursor-pointer flex flex-col items-center gap-2 w-full h-full justify-center">
+                    <span className="font-medium text-text-muted group-hover:text-white transition-colors">Drag & drop or Click to browse</span>
+                    <span className="text-xs text-text-muted/60">MP4 or WebM, Max 50MB</span>
+                  </label>
                 </div>
               </>
             )}
@@ -79,7 +176,22 @@ const Dataset = () => {
                 </div>
                 <h2 className="text-2xl font-semibold">Label the sign</h2>
                 <p className="text-text-muted max-w-md">What word or phrase did you just sign in Egyptian Sign Language?</p>
-                <input type="text" placeholder="e.g. Hello, Doctor, Thank you" className="w-full max-w-md px-6 py-4 rounded-xl glass border-white/20 focus:border-primary outline-none mt-4 text-center text-lg" />
+                <input
+                  type="text"
+                  placeholder="e.g. Hello, Doctor, Thank you"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className="w-full max-w-md px-6 py-4 rounded-xl glass border-white/20 focus:border-primary outline-none mt-4 text-center text-lg"
+                />
+                {file && (
+                  <div className="flex items-center gap-2 text-text-muted text-sm mt-2">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                    <span>{file.name}</span>
+                    <button onClick={resetForm} className="ml-2 hover:text-red-500">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </>
             )}
 
@@ -93,23 +205,49 @@ const Dataset = () => {
               </>
             )}
 
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-sm"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {error}
+              </motion.div>
+            )}
+
           </motion.div>
         </AnimatePresence>
 
         {/* Navigation Buttons */}
         <div className="flex gap-4 mt-12 z-10 w-full justify-center">
-          {step > 1 && (
-            <button onClick={() => setStep(step - 1)} className="px-8 py-3 rounded-full glass hover:bg-white/10 transition-colors font-medium">
+          {step > 1 && step < 3 && (
+            <button onClick={resetForm} className="px-8 py-3 rounded-full glass hover:bg-white/10 transition-colors font-medium">
               Back
             </button>
           )}
-          {step < 3 ? (
-            <button onClick={() => setStep(step + 1)} className="px-8 py-3 rounded-full bg-primary hover:bg-secondary text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] font-medium">
+          {step === 2 && (
+            <button
+              onClick={handleSubmitDataset}
+              disabled={submitting}
+              className="px-8 py-3 rounded-full bg-success hover:bg-success/80 text-white transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] font-medium flex items-center gap-2 disabled:opacity-50"
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Submit
+            </button>
+          )}
+          {step < 2 && (
+            <button
+              onClick={() => step === 1 ? null : setStep(step + 1)}
+              disabled={step === 1 || (step === 2 && !label.trim())}
+              className="px-8 py-3 rounded-full bg-primary hover:bg-secondary text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Continue
             </button>
-          ) : (
-            <button onClick={() => setStep(1)} className="px-8 py-3 rounded-full bg-success hover:bg-success/80 text-white transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] font-medium">
-              Submit Recording
+          )}
+          {step === 3 && (
+            <button onClick={resetForm} className="px-8 py-3 rounded-full bg-success hover:bg-success/80 text-white transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] font-medium">
+              Submit Another
             </button>
           )}
         </div>
@@ -117,6 +255,5 @@ const Dataset = () => {
     </div>
   );
 };
-import { AnimatePresence } from 'framer-motion';
 
 export default Dataset;
