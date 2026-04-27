@@ -71,6 +71,20 @@ export const translationService = {
   getSignLanguages: () => api.get('/translation/sign-languages/'),
 };
 
+export const translatorService = {
+  translate: (videoBlob) => {
+    const formData = new FormData();
+    formData.append('video', videoBlob);
+    return api.post('/translation/translate/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+
+export const generatorService = {
+  generate: (text) => api.post('/translation/to-sign/', { text }),
+};
+
 // =========================
 // MEETINGS
 // =========================

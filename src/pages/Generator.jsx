@@ -1,5 +1,6 @@
 import React, { useState, Suspense, useEffect } from 'react';
-import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
+import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle, Mic } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { useFBX, Environment } from '@react-three/drei';
 import { generatorService } from '../services/api';

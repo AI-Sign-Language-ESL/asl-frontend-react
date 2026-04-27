@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Webcam from 'react-webcam';
 import { Volume2, Power, History, Activity, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
