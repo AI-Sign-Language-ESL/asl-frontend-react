@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://api.tafahom.io';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.tafahom.io';
 
 const api = axios.create({
-  baseURL: `${API_URL}/v1`,
+  baseURL: `${API_URL}/api/v1`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -65,18 +65,18 @@ export const userService = {
 export const translatorService = {
   // Text to Sign (5 tokens) or Sign to Text
   translateText: (data) => api.post('/translation/text', data),
-  
+
   // Text to Sign video (10 tokens)
   toSign: (data) => api.post('/translation/to-sign', data),
-  
+
   // Audio to Text (5 tokens)
   speechToText: (formData) => api.post('/translation/speech-to-text', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
-  
+
   // List sign languages
   getSignList: () => api.get('/translation/sign-list'),
-  
+
   // Get history
   getHistory: (page = 1) => api.get(`/translation/history?page=${page}`),
 };
@@ -92,9 +92,9 @@ export const wsService = {
   connect: (onMessage) => {
     const token = localStorage.getItem('token');
     wsCallback = onMessage;
-    
+
     ws = new WebSocket(`${WS_URL}/ws/translation/stream?token=${token}`);
-    
+
     ws.onopen = () => console.log('WS connected');
     ws.onmessage = (event) => {
       if (wsCallback) {
@@ -104,13 +104,13 @@ export const wsService = {
     ws.onclose = () => console.log('WS disconnected');
     ws.onerror = (err) => console.error('WS error:', err);
   },
-  
+
   send: (data) => {
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(data));
     }
   },
-  
+
   disconnect: () => {
     if (ws) {
       ws.close();
