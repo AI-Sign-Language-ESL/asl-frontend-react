@@ -17,8 +17,9 @@ export default defineConfig({
   base: '/',
   plugins: [react(), tailwindcss()],
   server: {
-    port: 5181,
-    strictPort: true,
+    port: 5180,
+    host: true,
+    strictPort: false,
     https: fs.existsSync(keyPath) && fs.existsSync(certPath) 
       ? { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) }
       : false
