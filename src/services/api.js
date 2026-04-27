@@ -43,6 +43,9 @@ export const authService = {
   disable2FA: () => api.post('/authentication/2fa/disable/'),
   setup2FA: () => api.post('/authentication/2fa/setup/'),
   refresh: () => api.post('/authentication/token/refresh/'),
+  verifyEmail: (data) => api.post('/authentication/verify-email/', data),
+  resendCode: (email) => api.post('/authentication/resend-code/', { email }),
+  loginGoogle: (data) => api.post('/authentication/login/google/', data),
 };
 
 // =========================

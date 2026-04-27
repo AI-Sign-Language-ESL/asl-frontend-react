@@ -13,8 +13,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState('form');
+  const [step, setStep] = useState('form'); // form, verify, 2fa
   const [verificationEmail, setVerificationEmail] = useState('');
+  const [twoFaUserId, setTwoFaUserId] = useState(null);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -22,7 +23,7 @@ const Login = () => {
     last_name: '',
     email: '',
     password: '',
-    confirm_password: '',
+    confirmPassword: '',
   });
 
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
@@ -60,8 +61,14 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/home');
+      const data = await login(formData.email, formData.password);
+      if (data?.requires_2fa) {
+        setTwoFaUserId(data.user_id);
+        setStep('2fa');
+        setVerificationCode(['', '', '', '', '', '']);
+      } else {
+        navigate('/home');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password.');
     } finally {
@@ -80,13 +87,32 @@ const Login = () => {
     }
 
     if (newCode.every(digit => digit) && newCode.join('').length === 6) {
-      handleVerifyEmail(newCode.join(''));
+      if (step === '2fa') {
+        handleVerify2FA(newCode.join(''));
+      } else {
+        handleVerifyEmail(newCode.join(''));
+      }
     }
   };
 
   const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
       codeInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerify2FA = async (code) => {
+    setLoading(true);
+    setError('');
+    try {
+      await authService.login2FA({ user_id: twoFaUserId, token: code });
+      navigate('/home');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Invalid 2FA code.');
+      setVerificationCode(['', '', '', '', '', '']);
+      codeInputRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -295,8 +321,8 @@ const Login = () => {
                           <Lock className="absolute left-4 w-5 h-5 text-text-muted pointer-events-none" />
                           <input
                             type={showPassword ? "text" : "password"}
-                            value={formData.confirm_password}
-                            onChange={handleChange('confirm_password')}
+                            value={formData.confirmPassword}
+                            onChange={handleChange('confirmPassword')}
                             placeholder="••••••••"
                             required
                             minLength={6}
@@ -330,7 +356,7 @@ const Login = () => {
                     </button>
                   </div>
                 </motion.div>
-              ) : (
+              ) : step === 'verify' ? (
                 <motion.div
                   key="verify"
                   initial={{ opacity: 0, x: 20 }}
@@ -406,7 +432,76 @@ const Login = () => {
                     Back to sign up
                   </button>
                 </motion.div>
-              )}
+              ) : step === '2fa' ? (
+                <motion.div
+                  key="2fa"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-center"
+                >
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                    <Lock className="w-10 h-10 text-primary" />
+                  </div>
+                  <h3 className="text-3xl font-bold mb-2 text-text-main">Two-Factor Authentication</h3>
+                  <p className="text-text-muted mb-8">
+                    Enter the 6-digit code from your authenticator app.
+                  </p>
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-sm"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+
+                  <div className="flex justify-center gap-3 mb-8">
+                    {verificationCode.map((digit, index) => (
+                      <input
+                        key={index}
+                        ref={(el) => (codeInputRefs.current[index] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleCodeChange(index, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(index, e)}
+                        disabled={loading}
+                        className={classNames(
+                          "w-12 h-14 text-center text-2xl font-bold bg-bg-card border rounded-xl transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none disabled:opacity-50",
+                          error ? "border-red-500" : "border-border-subtle"
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  {loading ? (
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-6 text-primary" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-4">
+                      <button
+                        onClick={() => handleVerify2FA(verificationCode.join(''))}
+                        disabled={verificationCode.some(d => !d)}
+                        className="w-full bg-primary hover:bg-secondary text-white rounded-xl py-3.5 font-bold transition-all shadow-[0_4px_15px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Verify Code
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={goBack}
+                    className="mt-8 flex items-center gap-2 text-sm text-text-muted hover:text-text-main transition-colors mx-auto"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to sign in
+                  </button>
+                </motion.div>
+              ) : null}
             </AnimatePresence>
           </div>
         </div>

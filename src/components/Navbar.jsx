@@ -124,7 +124,7 @@ const Navbar = () => {
           >
             {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
           </button>
-          
+
           <NotificationBell />
 
           <button
@@ -156,8 +156,8 @@ const Navbar = () => {
                     to={link.path}
                     className={classNames(
                       "flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors",
-                      isActive 
-                        ? "bg-primary/20 text-primary" 
+                      isActive
+                        ? "bg-primary/20 text-primary"
                         : "text-text-muted hover:bg-white/5 hover:text-text-main"
                     )}
                   >
