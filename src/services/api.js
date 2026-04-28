@@ -151,7 +151,7 @@ export const healthService = {
 };
 
 // =========================
-// WEBSOCKET
+// WEBSOCKET - Translation Stream
 // =========================
 let ws = null;
 
@@ -172,6 +172,40 @@ export const wsService = {
   disconnect: () => {
     ws?.close();
   },
+};
+
+// =========================
+// WEBSOCKET - Meeting
+// =========================
+let meetingWs = null;
+
+export const meetingWsService = {
+  connect: (meetingCode, onMessage) => {
+    const token = localStorage.getItem('token');
+    meetingWs = new WebSocket(`${WS_URL}/ws/meeting/${meetingCode}/?token=${token}`);
+
+    meetingWs.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    };
+
+    return meetingWs;
+  },
+  send: (data) => {
+    if (meetingWs?.readyState === WebSocket.OPEN) {
+      meetingWs.send(JSON.stringify(data));
+    }
+  },
+  sendBinary: (data) => {
+    if (meetingWs?.readyState === WebSocket.OPEN) {
+      meetingWs.send(data);
+    }
+  },
+  disconnect: () => {
+    meetingWs?.close();
+    meetingWs = null;
+  },
+  getState: () => meetingWs?.readyState,
 };
 
 export default api;
