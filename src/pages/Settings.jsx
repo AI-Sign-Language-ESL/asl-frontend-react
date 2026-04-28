@@ -33,8 +33,14 @@ const Settings = () => {
   useEffect(() => {
     const fetchTokens = async () => {
       try {
-        const response = await billingService.myTokens();
-        setTokens(response.data);
+        const response = await billingService.mySubscription();
+        const sub = response.data;
+        setTokens({
+          available: sub.remaining_tokens,
+          used: sub.tokens_used,
+          monthlyAllowance: sub.total_tokens,
+          nextRecharge: sub.next_reset,
+        });
       } catch (err) {
         console.error('Failed to fetch tokens:', err);
       }
