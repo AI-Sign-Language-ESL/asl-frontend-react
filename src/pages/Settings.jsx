@@ -28,18 +28,15 @@ const Settings = () => {
     email: user?.email || '',
   });
 
-  const [tokens, setTokens] = useState({
-    available: 150,
-    nextRecharge: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-    monthlyAllowance: 200,
-    used: 50,
-  });
+  const [tokens, setTokens] = useState(null);
 
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
+    if (!tokens?.nextRecharge) return;
+
     const calculateTimeLeft = () => {
-      const diff = tokens.nextRecharge.getTime() - Date.now();
+      const diff = new Date(tokens.nextRecharge).getTime() - Date.now();
       if (diff > 0) {
         return {
           days: Math.floor(diff / (1000 * 60 * 60 * 24)),
@@ -54,7 +51,7 @@ const Settings = () => {
     setTimeLeft(calculateTimeLeft());
     const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
     return () => clearInterval(timer);
-  }, [tokens.nextRecharge]);
+  }, [tokens?.nextRecharge]);
 
   const [billingInfo, setBillingInfo] = useState({
     plan: 'free',
@@ -329,86 +326,92 @@ const Settings = () => {
                 </div>
 
                 {/* Token Balance Card */}
-                <div className="glass rounded-3xl p-6 border border-white/10 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                        <Coins className="w-6 h-6 text-primary" />
+                {tokens ? (
+                  <div className="glass rounded-3xl p-6 border border-white/10 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                          <Coins className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-text-main">Token Balance</h3>
+                          <p className="text-xs text-text-muted">Monthly allowance</p>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-success/20 text-success text-xs font-medium flex items-center gap-1">
+                        <Zap className="w-3 h-3" /> Active
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Available</p>
+                        <p className="text-2xl font-bold text-primary">{tokens.available}</p>
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-text-main">Token Balance</h3>
-                        <p className="text-xs text-text-muted">Monthly allowance</p>
+                        <p className="text-xs text-text-muted mb-1">Used</p>
+                        <p className="text-2xl font-bold text-text-main">{tokens.used}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Monthly Allowance</p>
+                        <p className="text-2xl font-bold text-text-main">{tokens.monthlyAllowance}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Next Recharge</p>
+                        <p className="text-sm font-semibold text-text-main">
+                          {new Date(tokens.nextRecharge).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
                       </div>
                     </div>
-                    <span className="px-3 py-1 rounded-full bg-success/20 text-success text-xs font-medium flex items-center gap-1">
-                      <Zap className="w-3 h-3" /> Active
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div>
-                      <p className="text-xs text-text-muted mb-1">Available</p>
-                      <p className="text-2xl font-bold text-primary">{tokens.available}</p>
+                    {/* Progress Bar */}
+                    <div className="mb-6">
+                      <div className="flex justify-between text-xs text-text-muted mb-2">
+                        <span>Usage this month</span>
+                        <span>{Math.round((tokens.used / tokens.monthlyAllowance) * 100)}%</span>
+                      </div>
+                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500"
+                          style={{ width: `${(tokens.used / tokens.monthlyAllowance) * 100}%` }}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-text-muted mb-1">Used</p>
-                      <p className="text-2xl font-bold text-text-main">{tokens.used}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-muted mb-1">Monthly Allowance</p>
-                      <p className="text-2xl font-bold text-text-main">{tokens.monthlyAllowance}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-muted mb-1">Next Recharge</p>
-                      <p className="text-sm font-semibold text-text-main">
-                        {tokens.nextRecharge.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Progress Bar */}
-                  <div className="mb-6">
-                    <div className="flex justify-between text-xs text-text-muted mb-2">
-                      <span>Usage this month</span>
-                      <span>{Math.round((tokens.used / tokens.monthlyAllowance) * 100)}%</span>
-                    </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500"
-                        style={{ width: `${(tokens.used / tokens.monthlyAllowance) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Countdown Timer */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-text-muted">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm">Next recharge in</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col items-center">
-                        <span className="text-lg font-bold text-text-main">{timeLeft.days}</span>
-                        <span className="text-[10px] text-text-muted">Days</span>
+                    {/* Countdown Timer */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-text-muted">
+                        <Clock className="w-4 h-4" />
+                        <span className="text-sm">Next recharge in</span>
                       </div>
-                      <span className="text-text-muted">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="text-lg font-bold text-text-main">{String(timeLeft.hours).padStart(2, '0')}</span>
-                        <span className="text-[10px] text-text-muted">Hours</span>
-                      </div>
-                      <span className="text-text-muted">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="text-lg font-bold text-text-main">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                        <span className="text-[10px] text-text-muted">Min</span>
-                      </div>
-                      <span className="text-text-muted">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="text-lg font-bold text-primary">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                        <span className="text-[10px] text-text-muted">Sec</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg font-bold text-text-main">{timeLeft.days}</span>
+                          <span className="text-[10px] text-text-muted">Days</span>
+                        </div>
+                        <span className="text-text-muted">:</span>
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg font-bold text-text-main">{String(timeLeft.hours).padStart(2, '0')}</span>
+                          <span className="text-[10px] text-text-muted">Hours</span>
+                        </div>
+                        <span className="text-text-muted">:</span>
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg font-bold text-text-main">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                          <span className="text-[10px] text-text-muted">Min</span>
+                        </div>
+                        <span className="text-text-muted">:</span>
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg font-bold text-primary">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                          <span className="text-[10px] text-text-muted">Sec</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="glass rounded-3xl p-6 border border-white/10 flex items-center justify-center">
+                    <p className="text-text-muted">Loading token information...</p>
+                  </div>
+                )}
 
                 {/* Recent Activity */}
                 <div>
