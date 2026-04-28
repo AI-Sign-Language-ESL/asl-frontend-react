@@ -46,6 +46,8 @@ export const authService = {
   verifyEmail: (data) => api.post('/authentication/verify-email/', data),
   resendCode: (email) => api.post('/authentication/resend-code/', { email }),
   loginGoogle: (data) => api.post('/authentication/login/google/', data),
+  sendResetEmail: (email) => api.post('/authentication/password/reset/', { email }),
+  confirmReset: (token, newPassword, confirmPassword) => api.post('/authentication/password/reset/confirm/', { token, new_password: newPassword, confirm_password: confirmPassword }),
 };
 
 // =========================

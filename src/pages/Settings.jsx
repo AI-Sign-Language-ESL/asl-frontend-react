@@ -15,7 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 import { useAuth } from '../context/AuthContext';
-import { userService, billingService } from '../services/api';
+import { authService, userService, billingService } from '../services/api';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
@@ -84,8 +84,14 @@ const Settings = () => {
     cardBrand: null,
   });
 
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showAddCardModal, setShowAddCardModal] = useState(false);
+const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+const [showAddCardModal, setShowAddCardModal] = useState(false);
+const [showResetModal, setShowResetModal] = useState(false);
+const [resetPassword, setResetPassword] = useState('');
+const [confirmResetPassword, setConfirmResetPassword] = useState('');
+const [resetToken, setResetToken] = useState('');
+const [resetStep, setResetStep] = useState('email'); // 'email', 'password', 'success'
+const [resetLoading, setResetLoading] = useState(false);
 
   const [accessibilitySettings, setAccessibilitySettings] = useState({
     textSize: 'medium',
@@ -150,6 +156,45 @@ const Settings = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete account.');
       setLoading(false);
+    }
+  };
+
+  const handleSendResetEmail = async () => {
+    setResetLoading(true);
+    setError('');
+    try {
+      await authService.sendResetEmail(user?.email || profile.email);
+      setResetStep('password');
+      setSuccess('Reset email sent! Check your inbox for the token.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send reset email.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (resetPassword !== confirmResetPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (resetPassword.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    setResetLoading(true);
+    setError('');
+    try {
+      await authService.confirmReset(resetToken, resetPassword, confirmResetPassword);
+      setResetStep('success');
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to reset password.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -343,19 +388,6 @@ const Settings = () => {
                     <span className="px-2.5 py-1 rounded-full bg-success/20 text-success text-xs font-medium">Verified</span>
                   </div>
 
-                  {/* Password Row */}
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Lock className="w-4 h-4 text-text-muted" />
-                      <div>
-                        <p className="text-xs text-text-muted">Password</p>
-                        <p className="text-sm font-medium text-text-main tracking-widest">••••••••</p>
-                      </div>
-                    </div>
-                    <button className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-secondary transition-colors">
-                      Change <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
 
                   {/* Plan Row */}
                   <div className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
@@ -532,7 +564,10 @@ const Settings = () => {
                           <p className="text-[11px] text-text-muted">Last changed 3 months ago</p>
                         </div>
                       </div>
-                      <button className="px-4 py-1.5 rounded-lg border border-white/10 text-xs font-bold hover:bg-white/5 transition-all">
+                      <button
+                        onClick={() => { setShowResetModal(true); setResetStep('email'); setError(''); setSuccess(''); }}
+                        className="px-4 py-1.5 rounded-lg border border-white/10 text-xs font-bold hover:bg-white/5 transition-all"
+                      >
                         Update
                       </button>
                     </div>
@@ -1152,6 +1187,114 @@ const Settings = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Reset Password Modal */}
+      {showResetModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowResetModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="glass rounded-3xl border border-white/10 p-6 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {resetStep === 'email' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-text-main">Reset Password</h3>
+                  <button onClick={() => setShowResetModal(false)} className="text-text-muted hover:text-text-main transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-text-muted mb-6">
+                  We'll send a password reset token to <span className="text-primary font-medium">{user?.email || profile.email}</span>
+                </p>
+                <button
+                  onClick={handleSendResetEmail}
+                  disabled={resetLoading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold hover:shadow-lg hover:shadow-primary/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                  Send Reset Email
+                </button>
+              </>
+            )}
+
+            {resetStep === 'password' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-text-main">Set New Password</h3>
+                  <button onClick={() => setShowResetModal(false)} className="text-text-muted hover:text-text-main transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="text-xs text-text-muted mb-1.5 block">Reset Token (from email)</label>
+                    <input
+                      type="text"
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      placeholder="Enter token from email"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-main placeholder-text-muted focus:outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-muted mb-1.5 block">New Password</label>
+                    <input
+                      type="password"
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-main placeholder-text-muted focus:outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-muted mb-1.5 block">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={confirmResetPassword}
+                      onChange={(e) => setConfirmResetPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-main placeholder-text-muted focus:outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleResetPassword}
+                  disabled={resetLoading || !resetToken || !resetPassword || !confirmResetPassword}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold hover:shadow-lg hover:shadow-primary/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                  Update Password
+                </button>
+              </>
+            )}
+
+            {resetStep === 'success' && (
+              <>
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8 text-success" />
+                  </div>
+                  <h3 className="text-xl font-bold text-text-main mb-2">Password Updated!</h3>
+                  <p className="text-sm text-text-muted">
+                    Your password has been changed successfully. You'll be signed out shortly.
+                  </p>
+                </div>
+              </>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
 
     </div>
   );
