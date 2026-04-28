@@ -8,7 +8,7 @@ import { authService } from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, register } = useAuth();
+  const { login, register, verifyEmail } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -120,10 +120,10 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      await authService.verifyEmail({ email: verificationEmail, code });
+      await verifyEmail(verificationEmail, code);
       navigate('/home');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid verification code.');
+      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid verification code.');
       setVerificationCode(['', '', '', '', '', '']);
       codeInputRefs.current[0]?.focus();
     } finally {

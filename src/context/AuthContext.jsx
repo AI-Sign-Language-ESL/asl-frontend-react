@@ -140,7 +140,27 @@ export const AuthProvider = ({ children }) => {
   };
 
   // =========================
-  // LOGOUT
+  // VERIFY EMAIL
+  // =========================
+  const verifyEmail = async (email, code) => {
+    const response = await authService.verifyEmail({ email, code });
+    const data = response.data;
+
+    if (data.access) {
+      localStorage.setItem('token', data.access);
+    }
+    if (data.refresh) {
+      localStorage.setItem('refresh', data.refresh);
+    }
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+    }
+
+    setIsAuthenticated(true);
+    return data;
+  };
+
   // =========================
   const logout = async () => {
     try {
@@ -176,6 +196,7 @@ export const AuthProvider = ({ children }) => {
         login2FA,
         loginGoogle,
         register,
+        verifyEmail,
         logout,
         updateUser,
       }}
