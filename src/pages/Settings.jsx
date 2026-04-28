@@ -13,7 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 import { useAuth } from '../context/AuthContext';
-import { userService } from '../services/api';
+import { userService, billingService } from '../services/api';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
@@ -29,6 +29,18 @@ const Settings = () => {
   });
 
   const [tokens, setTokens] = useState(null);
+
+  useEffect(() => {
+    const fetchTokens = async () => {
+      try {
+        const response = await billingService.myTokens();
+        setTokens(response.data);
+      } catch (err) {
+        console.error('Failed to fetch tokens:', err);
+      }
+    };
+    fetchTokens();
+  }, []);
 
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
