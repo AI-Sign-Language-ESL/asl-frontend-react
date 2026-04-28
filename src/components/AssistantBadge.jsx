@@ -22,7 +22,7 @@ const AssistantBadge = () => {
     setInput("");
     setIsTyping(true);
 
-    // Mock response
+    // TODO: Implement actual API call for assistant response
     setTimeout(() => {
       setIsTyping(false);
       setMessages(prev => [...prev, { text: t('assistant.bot_response'), isBot: true, isTranslationKey: true }]);

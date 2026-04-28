@@ -125,14 +125,14 @@ const Translator = () => {
                 className="absolute inset-x-0 h-32 bg-gradient-to-b from-transparent via-primary/20 to-transparent border-b border-primary/50 pointer-events-none"
               />
 
-              {/* Hand Tracking Points (Mock) */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60">
-                <motion.circle cx="30%" cy="50%" r="4" fill="#60A5FA" animate={{ r: [3,6,3] }} transition={{ repeat: Infinity, duration: 1 }} />
-                <motion.circle cx="32%" cy="45%" r="4" fill="#60A5FA" animate={{ r: [3,6,3] }} transition={{ repeat: Infinity, duration: 1.2 }} />
-                <motion.circle cx="28%" cy="55%" r="4" fill="#60A5FA" animate={{ r: [3,6,3] }} transition={{ repeat: Infinity, duration: 0.8 }} />
-                <line x1="30%" y1="50%" x2="32%" y2="45%" stroke="#3B82F6" strokeWidth="1.5" />
-                <line x1="30%" y1="50%" x2="28%" y2="55%" stroke="#3B82F6" strokeWidth="1.5" />
-              </svg>
+               {/* Hand Tracking Points */}
+               <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60">
+                 <motion.circle cx="30%" cy="50%" r="4" fill="#60A5FA" animate={{ r: [3,6,3] }} transition={{ repeat: Infinity, duration: 1 }} />
+                 <motion.circle cx="32%" cy="45%" r="4" fill="#60A5FA" animate={{ r: [3,6,3] }} transition={{ repeat: Infinity, duration: 1.2 }} />
+                 <motion.circle cx="28%" cy="55%" r="4" fill="#60A5FA" animate={{ r: [3,6,3] }} transition={{ repeat: Infinity, duration: 0.8 }} />
+                 <line x1="30%" y1="50%" x2="32%" y2="45%" stroke="#3B82F6" strokeWidth="1.5" />
+                 <line x1="30%" y1="50%" x2="28%" y2="55%" stroke="#3B82F6" strokeWidth="1.5" />
+               </svg>
 
               {/* Corner brackets */}
               <div className="absolute top-8 left-8 w-16 h-16 border-t-2 border-l-2 border-white/20 rounded-tl-xl" />

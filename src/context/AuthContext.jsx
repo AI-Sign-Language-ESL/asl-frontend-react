@@ -1,11 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService, userService } from '../services/api'; // ✅ FIX: import userService
 
-const TEST_USERS = {
-  'test@tafahom.com': { id: 1, name: 'Test User', email: 'test@tafahom.com' },
-  'admin@tafahom.com': { id: 2, name: 'Admin User', email: 'admin@tafahom.com' },
-};
-
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -48,18 +43,6 @@ export const AuthProvider = ({ children }) => {
   // LOGIN
   // =========================
   const login = async (email, password) => {
-    if (import.meta.env.DEV) {
-      const testUser = TEST_USERS[email.toLowerCase()];
-      if (testUser && password === 'password123') {
-        const mockToken = 'mock_token_' + Date.now();
-        localStorage.setItem('token', mockToken);
-        localStorage.setItem('user', JSON.stringify(testUser));
-        setUser(testUser);
-        setIsAuthenticated(true);
-        return { token: mockToken, user: testUser };
-      }
-    }
-
     const response = await authService.login({ email, password });
 
     const data = response.data;
@@ -134,16 +117,6 @@ export const AuthProvider = ({ children }) => {
   // REGISTER (FIXED)
   // =========================
   const register = async (userData) => {
-    if (import.meta.env.DEV) {
-      const newUser = { id: Date.now(), ...userData };
-      const mockToken = 'mock_token_' + Date.now();
-      localStorage.setItem('token', mockToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      setUser(newUser);
-      setIsAuthenticated(true);
-      return { token: mockToken, user: newUser };
-    }
-
     // ✅ FIX: correct API call
     const response = await userService.registerBasic(userData);
 
