@@ -96,7 +96,7 @@ const Navbar = () => {
             <>
               <div className="flex items-center gap-2 text-sm font-medium text-text-muted">
                 <User className="w-4 h-4" />
-                <span className="max-w-[100px] truncate">{user?.name || user?.email}</span>
+                <span className="max-w-[100px] truncate">{user?.username || user?.name || user?.email}</span>
               </div>
               <Link to="/settings" className="p-2.5 rounded-full hover:bg-white/10 transition-colors text-text-muted hover:text-text-main">
                 <Settings className="w-5 h-5" />
