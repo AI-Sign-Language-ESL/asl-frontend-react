@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Meeting from './pages/Meeting';
 import ManagePlan from './pages/ManagePlan';
+import YouTubeTranslate from './pages/YouTubeTranslate';
 
 import { useAuth } from './context/AuthContext';
 
@@ -102,6 +103,14 @@ const AnimatedRoutes = () => {
             element={
               <ProtectedRoute>
                 <Meeting />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/youtube"
+            element={
+              <ProtectedRoute>
+                <YouTubeTranslate />
               </ProtectedRoute>
             }
           />

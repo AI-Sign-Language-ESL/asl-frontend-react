@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, LogIn, UserPlus, Sun, Moon, LogOut, User, Menu, X, Home, Languages, Video, Users, Database, CreditCard } from 'lucide-react';
+import { Settings, LogIn, UserPlus, Sun, Moon, LogOut, User, Menu, X, Home, Languages, Video, Users, Database, CreditCard, Youtube } from 'lucide-react';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
@@ -20,6 +20,7 @@ const Navbar = () => {
     { name: t('navbar.home'), path: '/home', icon: <Home className="w-5 h-5" /> },
     { name: t('navbar.translator'), path: '/translator', icon: <Languages className="w-5 h-5" /> },
     { name: t('navbar.generator'), path: '/generator', icon: <Video className="w-5 h-5" /> },
+    { name: t('navbar.youtube'), path: '/youtube', icon: <Youtube className="w-5 h-5" /> },
     { name: t('navbar.meetings'), path: '/meetings', icon: <Users className="w-5 h-5" /> },
     { name: t('navbar.dataset'), path: '/dataset', icon: <Database className="w-5 h-5" /> },
     { name: t('navbar.pricing'), path: '/pricing', icon: <CreditCard className="w-5 h-5" /> },
