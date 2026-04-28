@@ -8,7 +8,8 @@ import {
   Check, Loader2, AlertCircle, Receipt, Plus,
   Download, Building, Zap, Crown, Star, ArrowUpRight,
   Calendar, Clock, FileText, Video, Users,
-  MessageSquare, Video as VideoIcon, Webhook, LogOut, Coins
+  MessageSquare, Video as VideoIcon, Webhook, LogOut, Coins,
+  Languages, Database
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
@@ -38,7 +39,9 @@ const Settings = () => {
         setTokens({
           available: sub.remaining_tokens,
           used: sub.tokens_used,
-          monthlyAllowance: sub.total_tokens,
+          monthlyAllowance: sub.plan?.weekly_tokens_limit,   // the plan's base 50 tokens
+          totalWithBonus: sub.total_tokens,                  // 50 + bonus
+          bonusTokens: sub.bonus_tokens,
           nextRecharge: sub.next_reset,
         });
       } catch (err) {
@@ -248,227 +251,259 @@ const Settings = () => {
             className="flex-1 flex flex-col overflow-hidden"
           >
             {activeTab === 'profile' && (
-              <div className="flex flex-col gap-10 relative">
-                {/* Background */}
-                <div className="absolute -top-20 -left-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl -z-10" />
-                <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-secondary/20 rounded-full blur-3xl -z-10" />
+              <div className="flex flex-col gap-5 relative">
 
-                <header>
-                  <h1 className="text-2xl font-bold text-text-main">My Profile</h1>
-                  <p className="text-sm text-text-muted mt-1">Manage your account details</p>
-                </header>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-text-main">My Profile</h1>
+                    <p className="text-sm text-text-muted mt-0.5">Manage your account and preferences</p>
+                  </div>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-secondary transition-all shadow-lg shadow-primary/30 disabled:opacity-50"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit3 className="w-4 h-4" />}
+                    Edit Profile
+                  </button>
+                </div>
 
-                {/* Simple Profile Header */}
-                <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary p-[3px]">
-                      <div className="w-full h-full rounded-full bg-bg-card flex items-center justify-center">
-                        <span className="text-3xl font-bold text-primary">
-                          {profile.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </span>
+                {/* User Card */}
+                <div className="glass rounded-2xl border border-white/10 p-5">
+                  <div className="flex items-center gap-4 mb-5">
+                    {/* Avatar */}
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 border-2 border-primary/30 flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-primary">
+                        {(user?.first_name || user?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    {/* Name & Email */}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-lg font-bold text-text-main truncate">
+                        {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username || 'Your Name'}
+                      </h2>
+                      <p className="text-sm text-text-muted truncate">{user?.email}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium">Pro Member</span>
+                        <span className="text-xs text-text-muted">Member since May 2024</span>
                       </div>
                     </div>
-                    <button className="absolute -bottom-1 -right-1 p-2 bg-primary rounded-full text-white shadow-lg hover:scale-110 transition-transform">
-                      <Edit3 className="w-3 h-3" />
+                  </div>
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 divide-x divide-white/10 border-t border-white/10 pt-4">
+                    <div className="text-center px-2">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <Languages className="w-4 h-4 text-primary" />
+                        <p className="text-xl font-bold text-primary">142</p>
+                      </div>
+                      <p className="text-xs text-text-muted">Translations</p>
+                    </div>
+                    <div className="text-center px-2">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <Users className="w-4 h-4 text-secondary" />
+                        <p className="text-xl font-bold text-secondary">28</p>
+                      </div>
+                      <p className="text-xs text-text-muted">Meetings</p>
+                    </div>
+                    <div className="text-center px-2">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <Database className="w-4 h-4 text-success" />
+                        <p className="text-xl font-bold text-success">15</p>
+                      </div>
+                      <p className="text-xs text-text-muted">Contributions</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Details — BEFORE Token Balance */}
+                <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+                  <div className="flex items-center gap-3 p-5 border-b border-white/10">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-text-main">Account Details</h3>
+                      <p className="text-xs text-text-muted">Manage your personal information</p>
+                    </div>
+                  </div>
+
+                  {/* Email Row */}
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-4 h-4 text-text-muted" />
+                      <div>
+                        <p className="text-xs text-text-muted">Email Address</p>
+                        <p className="text-sm font-medium text-text-main">{user?.email || profile.email}</p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-success/20 text-success text-xs font-medium">Verified</span>
+                  </div>
+
+                  {/* Password Row */}
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Lock className="w-4 h-4 text-text-muted" />
+                      <div>
+                        <p className="text-xs text-text-muted">Password</p>
+                        <p className="text-sm font-medium text-text-main tracking-widest">••••••••</p>
+                      </div>
+                    </div>
+                    <button className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-secondary transition-colors">
+                      Change <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-text-main">{profile.name || 'Your Name'}</h2>
-                    <p className="text-text-muted">{profile.email}</p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium">Pro Member</span>
-                      <span className="text-xs text-text-muted">142 translations • 28 meetings</span>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Divider */}
-                <div className="h-px bg-gradient-to-r from-transparent via-border-subtle to-transparent" />
-
-                {/* Simple Form */}
-                <div className="space-y-6 max-w-2xl">
-                  <div>
-                    <label className="text-xs text-text-muted uppercase tracking-wider mb-2 block">Full Name</label>
-                    <input
-                      type="text"
-                      value={profile.name}
-                      onChange={(e) => handleChange('name', e.target.value)}
-                      className="w-full bg-transparent border-b-2 border-border-subtle py-3 text-text-main text-lg focus:outline-none focus:border-primary transition-colors"
-                      placeholder="Enter your name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-text-muted uppercase tracking-wider mb-2 block">Email Address</label>
+                  {/* Plan Row */}
+                  <div className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                     <div className="flex items-center gap-3">
-                      <input
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) => handleChange('email', e.target.value)}
-                        className="flex-1 bg-transparent border-b-2 border-border-subtle py-3 text-text-main text-lg focus:outline-none focus:border-primary transition-colors"
-                        placeholder="Enter your email"
-                      />
-                      <span className="px-3 py-1 rounded-full bg-success/20 text-success text-xs font-medium">Verified</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-text-muted uppercase tracking-wider mb-2 block">Password</label>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 py-3">
-                        <span className="text-xl text-text-muted tracking-widest">••••••••</span>
+                      <Crown className="w-4 h-4 text-text-muted" />
+                      <div>
+                        <p className="text-xs text-text-muted">Plan</p>
+                        <p className="text-sm font-medium text-text-main">Pro Member</p>
                       </div>
-                      <button className="px-4 py-2 rounded-lg border border-white/20 text-text-main text-sm font-medium hover:bg-white/10 transition-all">
-                        Change Password
-                      </button>
                     </div>
-                  </div>
-                </div>
-
-                {/* Stats Row */}
-                <div className="flex items-center gap-8 py-4 border-y border-white/5">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">142</p>
-                    <p className="text-xs text-text-muted">Translations</p>
-                  </div>
-                  <div className="w-px h-8 bg-white/10" />
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-secondary">28</p>
-                    <p className="text-xs text-text-muted">Meetings</p>
-                  </div>
-                  <div className="w-px h-8 bg-white/10" />
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-success">15</p>
-                    <p className="text-xs text-text-muted">Contributions</p>
+                    <button className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-secondary transition-colors">
+                      Manage Plan <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
                 {/* Token Balance Card */}
                 {tokens ? (
-                  <div className="glass rounded-3xl p-6 border border-white/10 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-                    <div className="flex items-start justify-between mb-6">
+                  <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+                    <div className="flex items-center justify-between p-5 border-b border-white/10">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                          <Coins className="w-6 h-6 text-primary" />
+                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <Coins className="w-4 h-4 text-primary" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-text-main">Token Balance</h3>
-                          <p className="text-xs text-text-muted">Monthly allowance</p>
+                          <h3 className="font-bold text-sm text-text-main">Token Balance</h3>
+                          <p className="text-xs text-text-muted">Weekly allowance</p>
                         </div>
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-success/20 text-success text-xs font-medium flex items-center gap-1">
+                      <span className="px-2.5 py-1 rounded-full bg-success/20 text-success text-xs font-medium flex items-center gap-1">
                         <Zap className="w-3 h-3" /> Active
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                      <div>
-                        <p className="text-xs text-text-muted mb-1">Available</p>
-                        <p className="text-2xl font-bold text-primary">{tokens.available}</p>
+                    <div className="p-5">
+                      {/* Stats Row: Available / Used / Allowance */}
+                      <div className="grid grid-cols-3 gap-4 mb-5 pb-5 border-b border-white/10">
+                        <div>
+                          <p className="text-xs text-text-muted mb-1">Available</p>
+                          <p className="text-2xl font-bold text-primary">{tokens.available ?? '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-text-muted mb-1">Used</p>
+                          <p className="text-2xl font-bold text-text-main">{tokens.used ?? '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-text-muted mb-1">Weekly Plan</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-2xl font-bold text-text-main">{tokens.monthlyAllowance ?? '—'}</p>
+                            {tokens.bonusTokens > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-success/20 text-success text-[10px] font-semibold">+{tokens.bonusTokens} bonus</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-text-muted mb-1">Used</p>
-                        <p className="text-2xl font-bold text-text-main">{tokens.used}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-text-muted mb-1">Monthly Allowance</p>
-                        <p className="text-2xl font-bold text-text-main">{tokens.monthlyAllowance}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-text-muted mb-1">Next Recharge</p>
-                        <p className="text-sm font-semibold text-text-main">
-                          {new Date(tokens.nextRecharge).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Progress Bar */}
-                    <div className="mb-6">
-                      <div className="flex justify-between text-xs text-text-muted mb-2">
-                        <span>Usage this month</span>
-                        <span>{Math.round((tokens.used / tokens.monthlyAllowance) * 100)}%</span>
+                      {/* Token Count + % */}
+                      <div className="flex items-end justify-between mb-3">
+                        <div>
+                          <span className="text-3xl font-bold text-text-main">{tokens.available?.toLocaleString()}</span>
+                          <span className="text-text-muted text-sm ml-1">/ {tokens.monthlyAllowance?.toLocaleString()} tokens</span>
+                        </div>
+                        <span className="text-sm font-bold text-primary">
+                          {tokens.monthlyAllowance ? Math.round((tokens.used / tokens.monthlyAllowance) * 100) : 0}%
+                        </span>
                       </div>
-                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+
+                      {/* Progress Bar */}
+                      <div className="h-2.5 bg-white/10 rounded-full overflow-hidden mb-5">
                         <div
-                          className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500"
-                          style={{ width: `${(tokens.used / tokens.monthlyAllowance) * 100}%` }}
+                          className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-700"
+                          style={{ width: `${tokens.monthlyAllowance ? Math.min((tokens.used / tokens.monthlyAllowance) * 100, 100) : 0}%` }}
                         />
                       </div>
-                    </div>
 
-                    {/* Countdown Timer */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-text-muted">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-sm">Next recharge in</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-text-main">{timeLeft.days}</span>
-                          <span className="text-[10px] text-text-muted">Days</span>
+                      {/* Countdown */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-text-muted">
+                          <Calendar className="w-4 h-4" />
+                          <span className="text-sm">
+                            Next recharge in <span className="font-semibold text-primary">{timeLeft.days} days</span>
+                          </span>
                         </div>
-                        <span className="text-text-muted">:</span>
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-text-main">{String(timeLeft.hours).padStart(2, '0')}</span>
-                          <span className="text-[10px] text-text-muted">Hours</span>
-                        </div>
-                        <span className="text-text-muted">:</span>
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-text-main">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                          <span className="text-[10px] text-text-muted">Min</span>
-                        </div>
-                        <span className="text-text-muted">:</span>
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-primary">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                          <span className="text-[10px] text-text-muted">Sec</span>
+                        <div className="flex items-center gap-2">
+                          {[
+                            { value: timeLeft.days, label: 'Days' },
+                            { value: String(timeLeft.hours).padStart(2, '0'), label: 'Hours' },
+                            { value: String(timeLeft.minutes).padStart(2, '0'), label: 'Min' },
+                            { value: String(timeLeft.seconds).padStart(2, '0'), label: 'Sec' },
+                          ].map((unit, i) => (
+                            <React.Fragment key={i}>
+                              {i > 0 && <span className="text-text-muted font-bold">:</span>}
+                              <div className="flex flex-col items-center min-w-[2rem]">
+                                <span className={`text-base font-bold ${i === 3 ? 'text-primary' : 'text-text-main'}`}>{unit.value}</span>
+                                <span className="text-[9px] text-text-muted">{unit.label}</span>
+                              </div>
+                            </React.Fragment>
+                          ))}
                         </div>
                       </div>
                     </div>
                   </div>
+
                 ) : (
-                  <div className="glass rounded-3xl p-6 border border-white/10 flex items-center justify-center">
-                    <p className="text-text-muted">Loading token information...</p>
+                  <div className="glass rounded-2xl border border-white/10 p-6 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+                    <p className="text-text-muted text-sm">Loading token information...</p>
                   </div>
                 )}
 
                 {/* Recent Activity */}
-                <div>
-                  <h3 className="text-base font-bold text-text-main mb-4">Recent Activity</h3>
-                  <div className="flex gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                      <Video className="w-5 h-5 text-primary" />
+                <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+                  <div className="flex items-center justify-between p-5 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Clock className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm text-text-main">Recent Activity</h3>
+                        <p className="text-xs text-text-muted">Your latest activities</p>
+                      </div>
                     </div>
-                    <div className="flex-1 border-l-2 border-white/10 pl-4">
-                      <p className="text-sm font-medium text-text-main">Translation completed</p>
-                      <p className="text-xs text-text-muted mt-1">"Hello, how are you?" translated to ASL</p>
-                      <span className="text-[10px] text-text-muted mt-2 block">2 minutes ago</span>
-                    </div>
+                    <button className="text-xs font-semibold text-primary hover:text-secondary transition-colors">View All</button>
                   </div>
-                  <div className="flex gap-4 mt-4">
-                    <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center shrink-0">
-                      <Users className="w-5 h-5 text-success" />
-                    </div>
-                    <div className="flex-1 border-l-2 border-white/10 pl-4">
-                      <p className="text-sm font-medium text-text-main">Joined Team Standup meeting</p>
-                      <p className="text-xs text-text-muted mt-1">4 participants • 45 minutes</p>
-                      <span className="text-[10px] text-text-muted mt-2 block">1 hour ago</span>
-                    </div>
+
+                  <div className="divide-y divide-white/5">
+                    {[
+                      { icon: <Video className="w-4 h-4 text-primary" />, bg: 'bg-primary/10', title: 'Translation completed', desc: '"Hello, how are you?" translated to ASL', time: '2 minutes ago' },
+                      { icon: <Users className="w-4 h-4 text-secondary" />, bg: 'bg-secondary/10', title: 'Joined Team Standup meeting', desc: '4 participants • 45 minutes', time: '1 hour ago' },
+                      { icon: <Database className="w-4 h-4 text-success" />, bg: 'bg-success/10', title: 'New translation added', desc: '"Thank you" translated to ASL', time: '3 hours ago' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-white/5 transition-colors">
+                        <div className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center shrink-0`}>
+                          {item.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text-main truncate">{item.title}</p>
+                          <p className="text-xs text-text-muted truncate">{item.desc}</p>
+                        </div>
+                        <span className="text-xs text-text-muted shrink-0">{item.time}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Save Button */}
-                <div className="flex justify-end pt-4">
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={loading}
-                    className="px-8 py-3 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-bold flex items-center gap-2 shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all disabled:opacity-50"
-                  >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                    Save Changes
-                  </button>
-                </div>
               </div>
             )}
+
+
+
+
 
             {activeTab === 'account' && (
               <div className="flex flex-col h-full gap-8">
