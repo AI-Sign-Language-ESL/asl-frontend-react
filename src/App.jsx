@@ -15,6 +15,7 @@ import Pricing from './pages/Pricing';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Meeting from './pages/Meeting';
+import ManagePlan from './pages/ManagePlan';
 
 import { useAuth } from './context/AuthContext';
 
@@ -76,6 +77,14 @@ const AnimatedRoutes = () => {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings/manage-plan"
+            element={
+              <ProtectedRoute>
+                <ManagePlan />
               </ProtectedRoute>
             }
           />

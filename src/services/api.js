@@ -123,6 +123,7 @@ export const billingService = {
   subscribe: (data) => api.post('/billing/subscribe/', data),
   cancel: () => api.post('/billing/cancel/'),
   myTokens: () => api.get('/billing/me/tokens/'),
+  toggleAutoRenewal: () => api.post('/billing/toggle-auto-renewal/'),
 };
 
 // =========================

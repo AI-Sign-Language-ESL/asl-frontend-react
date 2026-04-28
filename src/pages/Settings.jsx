@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   User, Shield, Bell, Eye, Accessibility,
   CreditCard, Save, Globe, Palette, Mail,
@@ -19,6 +20,7 @@ import { userService, billingService } from '../services/api';
 const Settings = () => {
   const { t, i18n } = useTranslation();
   const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,8 +41,9 @@ const Settings = () => {
         setTokens({
           available: sub.remaining_tokens,
           used: sub.tokens_used,
-          monthlyAllowance: sub.plan?.weekly_tokens_limit,   // the plan's base limit (e.g. 50)
+          monthlyAllowance: sub.plan?.weekly_tokens_limit,
           nextRecharge: sub.next_reset,
+          planName: sub.plan?.name?.replace(' Plan', ''),   // e.g. "Free", "Basic"
         });
       } catch (err) {
         console.error('Failed to fetch tokens:', err);
@@ -282,10 +285,12 @@ const Settings = () => {
                         {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username || 'Your Name'}
                       </h2>
                       <p className="text-sm text-text-muted truncate">{user?.email}</p>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className="px-2.5 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium">Pro Member</span>
-                        <span className="text-xs text-text-muted">Member since May 2024</span>
-                      </div>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium capitalize">
+                        {tokens?.planName || 'Free'} Plan
+                      </span>
+                      <span className="text-xs text-text-muted">Member since {user?.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'May 2024'}</span>
+                    </div>
                     </div>
                   </div>
                   {/* Stats */}
@@ -358,10 +363,15 @@ const Settings = () => {
                       <Crown className="w-4 h-4 text-text-muted" />
                       <div>
                         <p className="text-xs text-text-muted">Plan</p>
-                        <p className="text-sm font-medium text-text-main">Pro Member</p>
+                        <p className="text-sm font-medium text-text-main capitalize">
+                          {tokens?.planName ? `${tokens.planName} Plan` : 'Free Plan'}
+                        </p>
                       </div>
                     </div>
-                    <button className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-secondary transition-colors">
+                    <button
+                      onClick={() => navigate('/settings/manage-plan')}
+                      className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-secondary transition-colors"
+                    >
                       Manage Plan <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
