@@ -39,9 +39,7 @@ const Settings = () => {
         setTokens({
           available: sub.remaining_tokens,
           used: sub.tokens_used,
-          monthlyAllowance: sub.plan?.weekly_tokens_limit,   // the plan's base 50 tokens
-          totalWithBonus: sub.total_tokens,                  // 50 + bonus
-          bonusTokens: sub.bonus_tokens,
+          monthlyAllowance: sub.plan?.weekly_tokens_limit,   // the plan's base limit (e.g. 50)
           nextRecharge: sub.next_reset,
         });
       } catch (err) {
@@ -402,9 +400,6 @@ const Settings = () => {
                           <p className="text-xs text-text-muted mb-1">Weekly Plan</p>
                           <div className="flex items-center gap-2">
                             <p className="text-2xl font-bold text-text-main">{tokens.monthlyAllowance ?? '—'}</p>
-                            {tokens.bonusTokens > 0 && (
-                              <span className="px-1.5 py-0.5 rounded-full bg-success/20 text-success text-[10px] font-semibold">+{tokens.bonusTokens} bonus</span>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -429,30 +424,32 @@ const Settings = () => {
                       </div>
 
                       {/* Countdown */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-text-muted">
-                          <Calendar className="w-4 h-4" />
-                          <span className="text-sm">
-                            Next recharge in <span className="font-semibold text-primary">{timeLeft.days} days</span>
-                          </span>
+                      {tokens.available < tokens.monthlyAllowance && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-text-muted">
+                            <Calendar className="w-4 h-4" />
+                            <span className="text-sm">
+                              Next recharge in <span className="font-semibold text-primary">{timeLeft.days} days</span>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {[
+                              { value: timeLeft.days, label: 'Days' },
+                              { value: String(timeLeft.hours).padStart(2, '0'), label: 'Hours' },
+                              { value: String(timeLeft.minutes).padStart(2, '0'), label: 'Min' },
+                              { value: String(timeLeft.seconds).padStart(2, '0'), label: 'Sec' },
+                            ].map((unit, i) => (
+                              <React.Fragment key={i}>
+                                {i > 0 && <span className="text-text-muted font-bold">:</span>}
+                                <div className="flex flex-col items-center min-w-[2rem]">
+                                  <span className={`text-base font-bold ${i === 3 ? 'text-primary' : 'text-text-main'}`}>{unit.value}</span>
+                                  <span className="text-[9px] text-text-muted">{unit.label}</span>
+                                </div>
+                              </React.Fragment>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {[
-                            { value: timeLeft.days, label: 'Days' },
-                            { value: String(timeLeft.hours).padStart(2, '0'), label: 'Hours' },
-                            { value: String(timeLeft.minutes).padStart(2, '0'), label: 'Min' },
-                            { value: String(timeLeft.seconds).padStart(2, '0'), label: 'Sec' },
-                          ].map((unit, i) => (
-                            <React.Fragment key={i}>
-                              {i > 0 && <span className="text-text-muted font-bold">:</span>}
-                              <div className="flex flex-col items-center min-w-[2rem]">
-                                <span className={`text-base font-bold ${i === 3 ? 'text-primary' : 'text-text-main'}`}>{unit.value}</span>
-                                <span className="text-[9px] text-text-muted">{unit.label}</span>
-                              </div>
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
