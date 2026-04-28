@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Youtube, Languages, Video, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Languages, Video, Loader2, Check, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { youtubeService } from '../services/api';
+
+const YoutubeIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M23.498 6.186a3.01 3.01 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.01 3.01 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.01 3.01 0 0 0 2.122 2.136c1.871.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.01 3.01 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+);
 
 const YouTubeTranslate = () => {
   const { user } = useAuth();
@@ -18,7 +24,6 @@ const YouTubeTranslate = () => {
       return;
     }
 
-    // Basic YouTube URL validation
     if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
       setError('Please enter a valid YouTube URL');
       return;
@@ -48,7 +53,7 @@ const YouTubeTranslate = () => {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/20">
-            <Youtube className="w-8 h-8 text-white" />
+            <YoutubeIcon className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-text-main mb-2">YouTube Translation</h1>
           <p className="text-text-muted max-w-md mx-auto">
@@ -172,7 +177,7 @@ const YouTubeTranslate = () => {
             <h3 className="font-bold text-text-main mb-4">How It Works</h3>
             <div className="grid grid-cols-3 gap-4">
               {[
-                { step: 1, icon: <Youtube className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
+                { step: 1, icon: <YoutubeIcon className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
                 { step: 2, icon: <Languages className="w-5 h-5" />, title: 'Transcribe', desc: 'Audio is extracted and converted to text' },
                 { step: 3, icon: <Video className="w-5 h-5" />, title: 'Translate', desc: 'Text is translated to sign language video' },
               ].map((item) => (
