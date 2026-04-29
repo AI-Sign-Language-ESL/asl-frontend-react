@@ -20,6 +20,8 @@ const Login = () => {
   const [step, setStep] = useState('form'); // form, verify, 2fa
   const [verificationEmail, setVerificationEmail] = useState('');
   const [twoFaUserId, setTwoFaUserId] = useState(null);
+  const [showUserTypeModal, setShowUserTypeModal] = useState(false);
+  const [userType, setUserType] = useState('basic'); // 'basic' or 'organization'
 
   const [formData, setFormData] = useState({
     username: '',
@@ -29,29 +31,24 @@ const Login = () => {
     password: '',
     confirmPassword: '',
     org_code: '',
+    organization_name: '',
+    activity_type: '',
+    job_title: '',
   });
 
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
-  const codeInputRefs = useRef([]);
+      if (userType === 'basic') {
+        registerData.username = formData.username;
+        registerData.first_name = formData.first_name;
+        registerData.last_name = formData.last_name;
+        registerData.org_code = formData.org_code;
+      } else if (userType === 'organization') {
+        registerData.username = formData.username;
+        registerData.first_name = formData.organization_name;
+        registerData.last_name = formData.activity_type;
+        registerData.job_title = formData.job_title;
+      }
 
-  const strength = formData.password.length === 0 ? 0 : formData.password.length < 5 ? 1 : formData.password.length < 8 ? 2 : 3;
-  const strengthColor = strength === 0 ? "bg-white/10" : strength === 1 ? "bg-red-500" : strength === 2 ? "bg-yellow-500" : "bg-success";
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const response = await register({
-        username: formData.username,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        org_code: formData.org_code,
-      });
+      await register(registerData);
       setVerificationEmail(formData.email);
       setStep('verify');
     } catch (err) {
@@ -241,7 +238,47 @@ const Login = () => {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="w-full max-w-md sm:max-w-lg md:max-w-5xl glass rounded-2xl sm:rounded-[2rem] md:rounded-[2.5rem] border border-border-subtle overflow-hidden flex flex-col md:flex-row relative z-10 shadow-2xl min-h-[500px] sm:min-h-[600px]">
+       {showUserTypeModal && (
+         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+           <div className="bg-bg-card p-8 rounded-2xl border border-border-subtle w-full max-w-md">
+             <h3 className="text-2xl font-bold text-text-main mb-6 text-center">Choose Account Type</h3>
+             <div className="space-y-4">
+               <button
+                 onClick={() => {
+                   setUserType('basic');
+                   setShowUserTypeModal(false);
+                   setIsLogin(false);
+                   setUserType('basic');
+                 }}
+                 className="w-full p-4 bg-bg-main border border-border-subtle rounded-xl hover:border-primary transition-colors text-left"
+               >
+                 <p className="font-bold text-text-main">Basic User</p>
+                 <p className="text-sm text-text-muted mt-1">Individual user with personal translation needs</p>
+               </button>
+               <button
+                 onClick={() => {
+                   setUserType('organization');
+                   setShowUserTypeModal(false);
+                   setIsLogin(false);
+                   setUserType('organization');
+                 }}
+                 className="w-full p-4 bg-bg-main border border-border-subtle rounded-xl hover:border-primary transition-colors text-left"
+               >
+                 <p className="font-bold text-text-main">Organization</p>
+                 <p className="text-sm text-text-muted mt-1">Company with multiple users under one account</p>
+               </button>
+             </div>
+             <button
+               onClick={() => setShowUserTypeModal(false)}
+               className="mt-6 w-full bg-bg-main border border-border-subtle text-text-main py-2 rounded-xl"
+             >
+               Cancel
+             </button>
+           </div>
+         </div>
+       )}
+
+       <div className="w-full max-w-md sm:max-w-lg md:max-w-5xl glass rounded-2xl sm:rounded-[2rem] md:rounded-[2.5rem] border border-border-subtle overflow-hidden flex flex-col md:flex-row relative z-10 shadow-2xl min-h-[500px] sm:min-h-[600px]">
         <div className="md:w-5/12 bg-bg-card/80 p-6 sm:p-8 md:p-12 flex flex-col justify-between relative overflow-hidden hidden md:flex border-r border-border-subtle">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent z-0" />
 
@@ -323,7 +360,62 @@ const Login = () => {
                       </div>
                     )}
 
-                    {!isLogin && (
+                    {!isLogin && userType === 'organization' && (
+                      <div>
+                        <label className="block text-sm font-medium text-text-muted mb-2">Username</label>
+                        <input
+                          type="text"
+                          placeholder="organization_username"
+                          value={formData.username}
+                          onChange={handleChange('username')}
+                          required
+                          disabled={loading}
+                          className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                        />
+                      </div>
+                    )}
+
+                    {!isLogin && userType === 'organization' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-text-muted mb-2">Organization Name</label>
+                          <input
+                            type="text"
+                            placeholder="My Organization"
+                            value={formData.organization_name}
+                            onChange={handleChange('organization_name')}
+                            required
+                            disabled={loading}
+                            className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-muted mb-2">Activity Type</label>
+                          <input
+                            type="text"
+                            placeholder="Education, Healthcare, etc."
+                            value={formData.activity_type}
+                            onChange={handleChange('activity_type')}
+                            required
+                            disabled={loading}
+                            className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-muted mb-2">Job Title</label>
+                          <input
+                            type="text"
+                            placeholder="Manager, Director, etc."
+                            value={formData.job_title}
+                            onChange={handleChange('job_title')}
+                            disabled={loading}
+                            className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {!isLogin && userType === 'basic' && (
                       <div>
                         <label className="block text-sm font-medium text-text-muted mb-2">Username</label>
                         <input
@@ -338,7 +430,7 @@ const Login = () => {
                       </div>
                     )}
 
-                    {!isLogin && (
+                    {!isLogin && userType === 'basic' && (
                       <div>
                         <label className="block text-sm font-medium text-text-muted mb-2">Organization Code (Optional)</label>
                         <input
@@ -474,9 +566,42 @@ const Login = () => {
 
                   <div className="mt-8 text-center text-sm text-text-muted">
                     {isLogin ? "Don't have an account? " : "Already have an account? "}
-                    <button onClick={() => { setIsLogin(!isLogin); setError(''); }} className="text-text-main font-semibold hover:text-primary transition-colors" disabled={loading || googleLoading}>
-                      {isLogin ? 'Sign up' : 'Sign in'}
-                    </button>
+                    {isLogin ? (
+                      <button
+                        onClick={() => {
+                          setShowUserTypeModal(true);
+                          setError('');
+                        }}
+                        className="text-text-main font-semibold hover:text-primary transition-colors"
+                        disabled={loading || googleLoading}
+                      >
+                        Sign up
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setIsLogin(true);
+                          setError('');
+                          setUserType('basic');
+                          setFormData({
+                            username: '',
+                            first_name: '',
+                            last_name: '',
+                            email: '',
+                            password: '',
+                            confirmPassword: '',
+                            org_code: '',
+                            organization_name: '',
+                            activity_type: '',
+                            job_title: '',
+                          });
+                        }}
+                        className="text-text-main font-semibold hover:text-primary transition-colors"
+                        disabled={loading || googleLoading}
+                      >
+                        Sign in
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ) : step === 'verify' ? (
