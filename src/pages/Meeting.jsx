@@ -56,10 +56,54 @@ const Meeting = () => {
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
 
+  // Test TURN server connectivity
+  const testTurnServer = useCallback(async () => {
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          {
+            urls: 'turn:72.62.145.111:3478',
+            username: 'tafahom_admin',
+            credential: 'StrongPassword123',
+          },
+        ],
+      });
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          console.log('TURN test candidate:', e.candidate.type, e.candidate);
+          if (e.candidate.type === 'relay') {
+            console.log('✅ TURN server is working! Relay candidate found.');
+          }
+        } else {
+          console.log('TURN test ICE gathering complete');
+          pc.close();
+        }
+      };
+
+      pc.createDataChannel('test');
+      await pc.createOffer().then(offer => pc.setLocalDescription(offer));
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        console.log('TURN test timeout');
+        pc.close();
+      }, 5000);
+    } catch (err) {
+      console.error('TURN test error:', err);
+    }
+  }, []);
+
   // ICE servers
   const iceServers = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    // TURN server (matches docker-compose.yml and turnserver.conf)
+    {
+      urls: 'turn:72.62.145.111:3478',
+      username: 'tafahom_admin',
+      credential: 'StrongPassword123',
+    },
   ];
 
   // Meeting timer
@@ -119,11 +163,14 @@ const Meeting = () => {
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('ICE candidate:', event.candidate.type, event.candidate);
         meetingWsService.send({
           type: 'ice_candidate',
           data: event.candidate,
           target: remoteUsername,
         });
+      } else {
+        console.log('ICE gathering complete for', remoteUsername);
       }
     };
 
@@ -147,40 +194,56 @@ const Meeting = () => {
   }, []);
 
   // Handle WebSocket messages
-  const handleWsMessage = useCallback(async (data) => {
-    const { type, message } = data;
+  const handleWsMessage = useCallback(async (rawData) => {
+    // Django channels sends the event payload exactly as the `data` object.
+    // Sometimes it's wrapped in { type: 'broadcast', message: {...} } and sometimes it's direct.
+    const data = rawData.type === 'broadcast' && rawData.message ? rawData.message : rawData;
 
-    if (!message) return;
+    if (!data || !data.type) return;
 
-    if (message.type === 'connection_established') {
-      console.log('Connected to meeting', message);
+    // Ignore messages from ourselves to prevent infinite WebRTC loops
+    if (data.user === user?.username && data.type !== 'connection_established') {
+      return;
+    }
+
+    if (data.type === 'connection_established') {
+      console.log('Connected to meeting', data);
 
       // Set participants from server
-      if (message.participants) {
-        setParticipants(message.participants.map(p => ({
+      if (data.participants) {
+        const existingParticipants = data.participants.map(p => ({
           id: p.id,
           username: p.user__username || p.username,
           role: p.role,
-        })));
+        }));
+        setParticipants(existingParticipants);
+
+        // Don't create offers here - let user_joined handler do it
+        // This prevents race conditions
       }
 
       return;
     }
 
-    if (message.type === 'user_joined') {
-      const username = message.user;
-      const role = message.role || 'participant';
+    if (data.type === 'user_joined') {
+      const username = data.user;
+      const role = data.role || 'participant';
+      console.log('User joined:', username, 'I am:', user?.username);
 
-      // Create peer connection and send offer
-      const pc = createPeerConnection(username);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      // Only create offer if we are already in the meeting (not the new joiner)
+      // The new joiner waits for an offer from existing participants
+      if (username !== user?.username) {
+        console.log('Creating offer for new user:', username);
+        const pc = createPeerConnection(username);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-      meetingWsService.send({
-        type: 'offer',
-        data: offer,
-        target: username,
-      });
+        meetingWsService.send({
+          type: 'offer',
+          data: offer,
+          target: username,
+        });
+      }
 
       // Add to participants
       setParticipants(prev => {
@@ -189,8 +252,8 @@ const Meeting = () => {
       });
     }
 
-    if (message.type === 'user_left') {
-      const username = message.user;
+    if (data.type === 'user_left') {
+      const username = data.user;
 
       // Close peer connection
       if (peerConnectionsRef.current[username]) {
@@ -209,9 +272,18 @@ const Meeting = () => {
       setParticipants(prev => prev.filter(p => p.username !== username));
     }
 
-    if (message.type === 'offer') {
-      const { data: offer, user: remoteUser } = message;
+    if (data.type === 'offer') {
+      console.log('Received offer from:', data.user, 'target:', data.target);
+      const { data: offer, user: remoteUser } = data;
+
+      // Ignore offers from ourselves
+      if (data.user === user?.username) {
+        console.log('Ignoring own offer');
+        return;
+      }
+
       let pc = peerConnectionsRef.current[remoteUser];
+      console.log('Creating/handling peer connection for:', remoteUser);
 
       if (!pc) {
         pc = createPeerConnection(remoteUser);
@@ -228,16 +300,24 @@ const Meeting = () => {
       });
     }
 
-    if (message.type === 'answer') {
-      const { data: answer, user: remoteUser } = message;
+    if (data.type === 'answer') {
+      const { data: answer, user: remoteUser } = data;
+
+      // Ignore our own answer
+      if (data.user === user?.username) return;
+
       const pc = peerConnectionsRef.current[remoteUser];
       if (pc) {
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
       }
     }
 
-    if (message.type === 'ice_candidate') {
-      const { data: candidate, user: remoteUser } = message;
+    if (data.type === 'ice_candidate') {
+      const { data: candidate, user: remoteUser } = data;
+
+      // Ignore our own ICE candidates
+      if (data.user === user?.username) return;
+
       const pc = peerConnectionsRef.current[remoteUser];
       if (pc && candidate) {
         try {
@@ -248,31 +328,31 @@ const Meeting = () => {
       }
     }
 
-    if (message.type === 'chat') {
+    if (data.type === 'chat') {
       setMessages(prev => [...prev, {
         id: Date.now(),
-        user: message.user,
-        text: message.message,
+        user: data.user,
+        text: data.message,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }]);
     }
 
-    if (message.type === 'speech_result') {
+    if (data.type === 'speech_result') {
       // Highlight user as speaking
-      if (message.text && message.text.trim()) {
+      if (data.text && data.text.trim()) {
         setSpeakingUsers(prev => ({
           ...prev,
-          [message.user]: setTimeout(() => {
+          [data.user]: setTimeout(() => {
             setSpeakingUsers(current => {
               const newState = { ...current };
-              delete newState[message.user];
+              delete newState[data.user];
               return newState;
             });
           }, 2000) // Stop highlighting after 2s of no speech
         }));
       }
     }
-  }, [createPeerConnection]);
+  }, [createPeerConnection, user?.username]);
 
   // Create meeting
   const handleCreateMeeting = async () => {
@@ -295,6 +375,7 @@ const Meeting = () => {
   // Join meeting
   const joinMeeting = async (code, host = false) => {
     try {
+      setMeetingCode(code); // Fix the blank meeting code issue
       // Join via REST API
       const response = await meetingService.join(code, {});
       setMeetingData(response.data);
@@ -547,7 +628,9 @@ const Meeting = () => {
             {/* Local Video */}
             <div className={`relative bg-[#1e293b] rounded-2xl overflow-hidden ${speakingUsers[user?.username] ? 'ring-4 ring-white' : ''}`}>
               <video
-                ref={localVideoRef}
+                ref={(el) => {
+                  if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
+                }}
                 autoPlay
                 muted
                 className="w-full h-full object-cover"
