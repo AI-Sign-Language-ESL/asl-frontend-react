@@ -1,9 +1,10 @@
-import React, { useState, Suspense, useEffect } from 'react';
-import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle, Mic } from 'lucide-react';
+import React, { useState, Suspense, useEffect, useRef } from 'react';
+import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { useFBX, Environment } from '@react-three/drei';
 import { generatorService } from '../services/api';
+import classNames from 'classnames';
 
 const AvatarModel = ({ animation }) => {
   const fbx = useFBX(animation || '/idle.fbx');
@@ -28,6 +29,13 @@ const Generator = () => {
   const [error, setError] = useState('');
   const [animation, setAnimation] = useState(null);
 
+  // Speech-to-text states
+  const [speechListening, setSpeechListening] = useState(false);
+  const speechRecognitionRef = useRef(null);
+  const speechTranscriptRef = useRef("");
+  const speechRestartTimeoutRef = useRef(null);
+  const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+
   const handleGenerate = async () => {
     if (!inputText.trim()) return;
     setLoading(true);
@@ -45,6 +53,77 @@ const Generator = () => {
     }
   };
 
+  // Speech-to-text functions
+  const isArabic = (text) => /[\u0600-\u06FF]/.test(text);
+
+  const createRecognition = (lang) => {
+    if (!SpeechRecognition) return null;
+    const recognition = new SpeechRecognition();
+    recognition.lang = lang;
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult = (event) => {
+      let newText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        newText += event.results[i][0].transcript;
+      }
+      speechTranscriptRef.current += newText;
+      setInputText(prev => prev + newText);
+
+      if (event.results[event.results.length - 1].isFinal) {
+        const newLang = isArabic(newText) ? "ar-EG" : "en-US";
+        if (recognition.lang !== newLang) {
+          clearTimeout(speechRestartTimeoutRef.current);
+          speechRestartTimeoutRef.current = setTimeout(() => restartSpeechRecognition(newLang), 500);
+        }
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === "not-allowed") setSpeechListening(false);
+    };
+
+    return recognition;
+  };
+
+  const startSpeechListening = () => {
+    if (!SpeechRecognition) return;
+    speechTranscriptRef.current = "";
+    const rec = createRecognition("en-US");
+    if (rec) {
+      rec.start();
+      speechRecognitionRef.current = rec;
+      setSpeechListening(true);
+    }
+  };
+
+  const stopSpeechListening = () => {
+    speechRecognitionRef.current?.stop();
+    speechRecognitionRef.current = null;
+    clearTimeout(speechRestartTimeoutRef.current);
+    setSpeechListening(false);
+  };
+
+  const restartSpeechRecognition = (lang) => {
+    if (!speechListening) return;
+    speechRecognitionRef.current?.stop();
+    setTimeout(() => {
+      const rec = createRecognition(lang);
+      if (rec) {
+        rec.start();
+        speechRecognitionRef.current = rec;
+      }
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      speechRecognitionRef.current?.stop();
+      clearTimeout(speechRestartTimeoutRef.current);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] gap-6 max-w-5xl mx-auto w-full pb-6">
 
@@ -61,15 +140,24 @@ const Generator = () => {
 
       {/* Input Area */}
       <div className="glass p-4 rounded-3xl flex gap-3 border border-border-subtle items-center drop-shadow-xl relative z-10">
-        <button className="p-3 bg-bg-card hover:bg-bg-card/80 rounded-full transition-colors group">
-          <Mic className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />
-        </button>
+        {SpeechRecognition && (
+          <button
+            onClick={speechListening ? stopSpeechListening : startSpeechListening}
+            className={classNames(
+              "p-3 rounded-full transition-colors group",
+              speechListening ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" : "bg-bg-card hover:bg-bg-card/80 text-text-main"
+            )}
+            title={speechListening ? "Stop speech recognition" : "Start speech recognition"}
+          >
+            {speechListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />}
+          </button>
+        )}
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-          placeholder="Enter text to translate into sign language..."
+          placeholder={speechListening ? "Listening..." : "Enter text to translate into sign language..."}
           disabled={loading}
           className="flex-1 bg-transparent outline-none text-text-main placeholder:text-text-muted/50 text-lg disabled:opacity-50"
         />

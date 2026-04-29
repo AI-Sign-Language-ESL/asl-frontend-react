@@ -17,11 +17,15 @@ import Login from './pages/Login';
 import Meeting from './pages/Meeting';
 import ManagePlan from './pages/ManagePlan';
 import YouTubeTranslate from './pages/YouTubeTranslate';
+import AdminDashboard from './pages/AdminDashboard';
+import SupervisorDashboard from './pages/SupervisorDashboard';
+import OrganizationAdmin from './pages/OrganizationAdmin';
+import MyContributions from './pages/MyContributions';
 
 import { useAuth } from './context/AuthContext';
 
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -34,6 +38,10 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    return <Navigate to="/home" replace />;
   }
 
   return children;
@@ -111,6 +119,38 @@ const AnimatedRoutes = () => {
             element={
               <ProtectedRoute>
                 <YouTubeTranslate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-contributions"
+            element={
+              <ProtectedRoute>
+                <MyContributions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supervisor"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <SupervisorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/org-admin"
+            element={
+              <ProtectedRoute allowedRoles={['organization']}>
+                <OrganizationAdmin />
               </ProtectedRoute>
             }
           />

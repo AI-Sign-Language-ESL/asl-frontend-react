@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Check, ArrowLeft } from 'lucide-react';
@@ -6,12 +6,16 @@ import classNames from 'classnames';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/api';
 
+// Google OAuth Config - Replace with your actual Client ID
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
+
 const Login = () => {
   const navigate = useNavigate();
-  const { login, register, verifyEmail } = useAuth();
+  const { login, register, verifyEmail, loginGoogle } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState('form'); // form, verify, 2fa
   const [verificationEmail, setVerificationEmail] = useState('');
@@ -24,6 +28,7 @@ const Login = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    org_code: '',
   });
 
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
@@ -45,6 +50,7 @@ const Login = () => {
         email: formData.email,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
+        org_code: formData.org_code,
       });
       setVerificationEmail(formData.email);
       setStep('verify');
@@ -162,6 +168,52 @@ const Login = () => {
       setError(err.response?.data?.message || 'Failed to resend code.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // =========================
+  // GOOGLE SIGN-IN (BASIC USERS ONLY)
+  // =========================
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setError('');
+
+    try {
+      // Load Google OAuth script if not loaded
+      if (!window.google) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://accounts.google.com/gsi/client';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+
+      // Initialize Google OAuth
+      window.google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'email profile',
+        callback: async (response) => {
+          if (response.error) {
+            setError('Google Sign-In failed. Please try again.');
+            setGoogleLoading(false);
+            return;
+          }
+
+          try {
+            const data = await loginGoogle(response.access_token);
+            navigate('/home');
+          } catch (err) {
+            setError(err.message || 'Google Sign-In is only available for Basic Users.');
+          } finally {
+            setGoogleLoading(false);
+          }
+        },
+      }).requestAccessToken();
+    } catch (err) {
+      setError('Failed to initialize Google Sign-In.');
+      setGoogleLoading(false);
     }
   };
 
@@ -286,6 +338,20 @@ const Login = () => {
                       </div>
                     )}
 
+                    {!isLogin && (
+                      <div>
+                        <label className="block text-sm font-medium text-text-muted mb-2">Organization Code (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="Enter organization code"
+                          value={formData.org_code}
+                          onChange={handleChange('org_code')}
+                          disabled={loading}
+                          className="w-full bg-bg-card border border-border-subtle rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary transition-colors text-text-main text-sm disabled:opacity-50"
+                        />
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-sm font-medium text-text-muted mb-2">Email Address</label>
                       <div className="relative flex items-center">
@@ -356,7 +422,7 @@ const Login = () => {
 
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || googleLoading}
                       className="w-full bg-primary hover:bg-secondary text-white rounded-xl py-3.5 font-bold transition-all shadow-[0_4px_15px_rgba(59,130,246,0.3)] hover:shadow-[0_6px_25px_rgba(59,130,246,0.4)] flex items-center justify-center gap-2 group mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? (
@@ -370,9 +436,45 @@ const Login = () => {
                     </button>
                   </form>
 
+                  {/* Google Sign-In (Basic Users Only) */}
+                  {isLogin && (
+                    <>
+                      <div className="my-6 flex items-center gap-4">
+                        <div className="flex-1 h-px bg-border-subtle" />
+                        <span className="text-xs text-text-muted">OR</span>
+                        <div className="flex-1 h-px bg-border-subtle" />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        disabled={googleLoading || loading}
+                        className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl py-3.5 font-semibold transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {googleLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Sign in with Google
+                          </>
+                        )}
+                      </button>
+
+                      <p className="mt-3 text-center text-xs text-text-muted">
+                        Only for Basic Users
+                      </p>
+                    </>
+                  )}
+
                   <div className="mt-8 text-center text-sm text-text-muted">
                     {isLogin ? "Don't have an account? " : "Already have an account? "}
-                    <button onClick={() => { setIsLogin(!isLogin); setError(''); }} className="text-text-main font-semibold hover:text-primary transition-colors" disabled={loading}>
+                    <button onClick={() => { setIsLogin(!isLogin); setError(''); }} className="text-text-main font-semibold hover:text-primary transition-colors" disabled={loading || googleLoading}>
                       {isLogin ? 'Sign up' : 'Sign in'}
                     </button>
                   </div>

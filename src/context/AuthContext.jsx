@@ -89,14 +89,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   // =========================
-  // GOOGLE LOGIN
+  // GOOGLE LOGIN (BASIC USERS ONLY)
   // =========================
   const loginGoogle = async (googleToken) => {
-    // Assuming backend takes { token: googleToken }
-    const response = await authService.loginGoogle?.({ token: googleToken }); 
-    // Wait, api.js might not have loginGoogle yet, I need to add it.
-    // For now I'll just use api.post directly if it's not there, but let's assume I'll add it to api.js.
+    const response = await authService.loginGoogle?.({ token: googleToken });
     const data = response.data;
+
+    // ✅ RESTRICT: Only allow basic users
+    if (data.user?.role !== 'basic_user') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      throw new Error('Google Sign-In is only available for Basic Users.');
+    }
 
     if (data.access) {
       localStorage.setItem('token', data.access);
