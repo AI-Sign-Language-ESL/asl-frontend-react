@@ -30,8 +30,7 @@ const Navbar = () => {
     { name: t('navbar.meetings'), path: '/meetings', icon: <Users className="w-5 h-5" /> },
     { name: t('navbar.dataset'), path: '/dataset', icon: <Database className="w-5 h-5" /> },
     { name: 'My Contributions', path: '/my-contributions', icon: <Database className="w-5 h-5" /> },
-    ...(user?.role === 'admin' ? [{ name: 'Admin', path: '/admin', icon: <Settings className="w-5 h-5" /> }] : []),
-    ...(user?.role === 'supervisor' ? [{ name: 'Supervisor', path: '/supervisor', icon: <Users className="w-5 h-5" /> }] : []),
+    ...(user?.role === 'admin' || user?.role === 'supervisor' ? [{ name: 'Admin', path: '/admin-dashboard', icon: <Settings className="w-5 h-5" /> }] : []),
     ...(user?.role === 'organization' ? [{ name: 'Org Admin', path: '/org-admin', icon: <Users className="w-5 h-5" /> }] : []),
     { name: t('navbar.pricing'), path: '/pricing', icon: <CreditCard className="w-5 h-5" /> },
   ];

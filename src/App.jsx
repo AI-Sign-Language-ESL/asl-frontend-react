@@ -14,6 +14,8 @@ import Dataset from './pages/Dataset';
 import Pricing from './pages/Pricing';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
+import AdminLogin from './pages/AdminLogin';
+import OrgAdminLogin from './pages/OrgAdminLogin';
 import Meeting from './pages/Meeting';
 import ManagePlan from './pages/ManagePlan';
 import YouTubeTranslate from './pages/YouTubeTranslate';
@@ -98,6 +100,10 @@ const AnimatedRoutes = () => {
             }
           />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/supervisor" element={<SupervisorDashboard />} />
+          <Route path="/org-admin" element={<OrganizationAdmin />} />
           <Route
             path="/meeting/:id"
             element={
@@ -130,30 +136,9 @@ const AnimatedRoutes = () => {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/supervisor"
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                <SupervisorDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/org-admin"
-            element={
-              <ProtectedRoute allowedRoles={['organization']}>
-                <OrganizationAdmin />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/supervisor" element={<SupervisorDashboard />} />
+          <Route path="/org-admin" element={<OrganizationAdmin />} />
         </Route>
 
         <Route

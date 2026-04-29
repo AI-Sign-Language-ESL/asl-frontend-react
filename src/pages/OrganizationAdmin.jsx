@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
 import { Link } from 'react-router-dom';
 import { Plus, Minus, Trash2, Users, Copy } from 'lucide-react';
 
 const OrganizationAdmin = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [members, setMembers] = useState([]);
   const [orgProfile, setOrgProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,8 +18,16 @@ const OrganizationAdmin = () => {
   const [actionType, setActionType] = useState('add');
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/org-login');
+      return;
+    }
+    if (user?.role !== 'organization') {
+      navigate('/home');
+      return;
+    }
     loadData();
-  }, []);
+  }, [isAuthenticated, user]);
 
   const loadData = async () => {
     try {
@@ -54,7 +64,7 @@ const OrganizationAdmin = () => {
       setShowTokenModal(false);
       setTokenAmount('');
       setTokenReason('');
-      loadMembers();
+      loadData();
     } catch (err) {
       alert('Failed to add tokens');
     }
@@ -70,10 +80,15 @@ const OrganizationAdmin = () => {
       setShowTokenModal(false);
       setTokenAmount('');
       setTokenReason('');
-      loadMembers();
+      loadData();
     } catch (err) {
       alert('Failed to remove tokens');
     }
+  };
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(orgProfile?.org_code || '');
+    alert('Code copied!');
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-text-main">Loading...</div>;
@@ -86,10 +101,10 @@ const OrganizationAdmin = () => {
             <h1 className="text-3xl font-bold text-text-main">Organization Dashboard</h1>
             <p className="text-text-muted mt-1">Manage your organization members</p>
           </div>
-          <Link to="/home" className="text-primary hover:underline">Back to Home</Link>
+          <button onClick={() => navigate('/home')} className="text-primary hover:underline">Back to Home</button>
         </div>
 
-          <div className="bg-bg-card rounded-2xl border border-border-subtle p-6 mb-8">
+        <div className="bg-bg-card rounded-2xl border border-border-subtle p-6 mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Users className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-bold text-text-main">Organization Info</h2>
@@ -103,14 +118,7 @@ const OrganizationAdmin = () => {
               <p className="text-text-muted text-sm">Organization Code</p>
               <div className="flex items-center gap-2">
                 <p className="text-text-main font-bold text-lg">{orgProfile?.org_code || user?.organization_profile?.org_code}</p>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(orgProfile?.org_code || user?.organization_profile?.org_code || '');
-                    alert('Code copied!');
-                  }}
-                  className="p-1 hover:bg-bg-main rounded text-text-muted hover:text-text-main"
-                  title="Copy code"
-                >
+                <button onClick={copyCode} className="p-1 hover:bg-bg-main rounded text-text-muted hover:text-text-main" title="Copy code">
                   <Copy className="w-4 h-4" />
                 </button>
                 <span className="text-xs text-text-muted">(Share with members)</span>

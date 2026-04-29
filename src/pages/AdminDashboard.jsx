@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
 import { Link } from 'react-router-dom';
 import { Users, CreditCard, TrendingUp, Activity, Search, Edit2, Plus, Minus, Eye } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, loading } = useAuth();
+
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -23,8 +26,16 @@ const AdminDashboard = () => {
   const [orgMembers, setOrgMembers] = useState([]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/admin-login');
+      return;
+    }
+    if (!user?.is_superuser && !user?.is_staff && user?.role !== 'admin') {
+      navigate('/home');
+      return;
+    }
     loadData();
-  }, [roleFilter]);
+  }, [roleFilter, isAuthenticated, user]);
 
   const loadData = async () => {
     try {
@@ -37,7 +48,7 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error('Failed to load admin data', err);
     } finally {
-      setLoading(false);
+      setLoadingData(false);
     }
   };
 
@@ -161,9 +172,9 @@ const AdminDashboard = () => {
             <form onSubmit={handleSearch} className="flex gap-2 flex-1">
               <input
                 type="text"
-                placeholder="Search users..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search users..."
                 className="flex-1 bg-bg-main border border-border-subtle rounded-xl px-4 py-2 text-text-main"
               />
               <button type="submit" className="bg-primary text-white px-4 py-2 rounded-xl">

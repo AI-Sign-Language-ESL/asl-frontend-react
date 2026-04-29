@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Check, ArrowLeft } from 'lucide-react';
@@ -14,7 +14,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState('form');
+  const [step, setStep] = useState('form'); // form, verify, 2fa
   const [verificationEmail, setVerificationEmail] = useState('');
   const [twoFaUserId, setTwoFaUserId] = useState(null);
   const [showUserTypeModal, setShowUserTypeModal] = useState(false);
@@ -187,6 +187,42 @@ const Login = () => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
     setError('');
   };
+
+  // Google Sign-In for basic users only
+  const handleGoogleSignIn = () => {
+    setGoogleLoading(true);
+    setError('');
+    // Redirect to backend Google OAuth endpoint
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.tafahom.io';
+    window.location.href = `${apiUrl}/api/v1/authentication/login/google/`;
+  };
+
+  useEffect(() => {
+    // Handle Google OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const error = urlParams.get('error');
+
+    if (token) {
+      setGoogleLoading(true);
+      loginGoogle({ token })
+        .then(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          navigate('/home');
+        })
+        .catch((err) => {
+          setError(err.response?.data?.detail || 'Google sign-in failed');
+        })
+        .finally(() => {
+          setGoogleLoading(false);
+        });
+    }
+
+    if (error) {
+      setError('Google sign-in was cancelled or failed');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const goBack = () => {
     setStep('form');
@@ -506,30 +542,42 @@ const Login = () => {
                     </button>
                   </form>
 
-                  {!isLogin && (
-                    <div className="mt-6 text-center text-sm text-text-muted">
-                      Already have an account?{' '}
-                      <button onClick={() => { setIsLogin(true); setError(''); setUserType('basic'); resetForm(); }} className="text-text-main font-semibold hover:text-primary transition-colors" disabled={loading}>
-                        Sign in
+                  {/* Google Sign-In for Basic Users Only */}
+                  {isLogin && (
+                    <>
+                      <div className="my-6 flex items-center gap-4">
+                        <div className="flex-1 h-px bg-border-subtle" />
+                        <span className="text-text-muted text-sm">or</span>
+                        <div className="flex-1 h-px bg-border-subtle" />
+                      </div>
+
+                      <button
+                        onClick={handleGoogleSignIn}
+                        disabled={googleLoading}
+                        className="w-full bg-white hover:bg-gray-50 text-gray-900 rounded-xl py-3.5 font-bold transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300"
+                      >
+                        {googleLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Chrome className="w-5 h-5" />
+                            Continue with Google
+                          </>
+                        )}
                       </button>
-                    </div>
+
+                      <p className="mt-3 text-center text-xs text-text-muted">
+                        Basic users only
+                      </p>
+                    </>
                   )}
 
-                  {isLogin && (
-                    <div className="mt-8 text-center text-sm text-text-muted">
-                      Don't have an account?{' '}
-                      <button
-                        onClick={() => {
-                          setShowUserTypeModal(true);
-                          setError('');
-                        }}
-                        className="text-text-main font-semibold hover:text-primary transition-colors"
-                        disabled={loading || googleLoading}
-                      >
-                        Sign up
-                      </button>
-                    </div>
-                  )}
+                  <div className="mt-8 text-center text-sm text-text-muted">
+                    {isLogin ? "Don't have an account? " : "Already have an account? "}
+                    <button onClick={() => { setIsLogin(!isLogin); setError(''); }} className="text-text-main font-semibold hover:text-primary transition-colors" disabled={loading || googleLoading}>
+                      {isLogin ? 'Sign up' : 'Sign in'}
+                    </button>
+                  </div>
                 </motion.div>
               ) : step === 'verify' ? (
                 <motion.div

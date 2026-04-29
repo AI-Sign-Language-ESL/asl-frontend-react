@@ -64,15 +64,27 @@ const Generator = () => {
     recognition.continuous = true;
 
     recognition.onresult = (event) => {
-      let newText = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        newText += event.results[i][0].transcript;
-      }
-      speechTranscriptRef.current += newText;
-      setInputText(prev => prev + newText);
+      let interimTranscript = "";
+      let finalTranscript = "";
 
-      if (event.results[event.results.length - 1].isFinal) {
-        const newLang = isArabic(newText) ? "ar-EG" : "en-US";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        speechTranscriptRef.current += finalTranscript;
+      }
+
+      const fullText = speechTranscriptRef.current + interimTranscript;
+      setInputText(fullText);
+
+      if (finalTranscript) {
+        const newLang = isArabic(finalTranscript) ? "ar-EG" : "en-US";
         if (recognition.lang !== newLang) {
           clearTimeout(speechRestartTimeoutRef.current);
           speechRestartTimeoutRef.current = setTimeout(() => restartSpeechRecognition(newLang), 500);
@@ -90,6 +102,7 @@ const Generator = () => {
   const startSpeechListening = () => {
     if (!SpeechRecognition) return;
     speechTranscriptRef.current = "";
+    setInputText("");
     const rec = createRecognition("en-US");
     if (rec) {
       rec.start();
@@ -103,6 +116,7 @@ const Generator = () => {
     speechRecognitionRef.current = null;
     clearTimeout(speechRestartTimeoutRef.current);
     setSpeechListening(false);
+    speechTranscriptRef.current = inputText;
   };
 
   const restartSpeechRecognition = (lang) => {

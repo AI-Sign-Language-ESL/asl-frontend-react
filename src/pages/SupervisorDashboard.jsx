@@ -1,22 +1,29 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
-import { Link } from 'react-router-dom';
 import { Check, X, Eye, Filter } from 'lucide-react';
 
 const SupervisorDashboard = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('pending');
-  const [selectedVideo, setSelectedVideo] = useState(null);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/supervisor-login');
+      return;
+    }
+    if (!user?.is_superuser && !user?.is_staff && user?.role !== 'supervisor' && user?.role !== 'admin') {
+      navigate('/home');
+      return;
+    }
     loadContributions();
-  }, [statusFilter]);
+  }, [statusFilter, isAuthenticated, user]);
 
   const loadContributions = async () => {
-    setLoading(true);
     try {
       const res = await userService.supervisorContributions({ status: statusFilter });
       setContributions(res.data);
@@ -61,11 +68,14 @@ const SupervisorDashboard = () => {
     <div className="min-h-screen bg-bg-main p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-text-main">Supervisor Dashboard</h1>
-          <Link to="/home" className="text-primary hover:underline">Back to Home</Link>
+          <div>
+            <h1 className="text-3xl font-bold text-text-main">Supervisor Dashboard</h1>
+            <p className="text-text-muted mt-1">Review dataset contributions</p>
+          </div>
+          <button onClick={() => navigate('/home')} className="text-primary hover:underline">Back to Home</button>
         </div>
 
-        <div className="bg-bg-card rounded-2xl border border-border-subtle p-6">
+        <div className="bg-bg-card rounded-2xl border border-border-subtle p-6 mb-8">
           <div className="flex gap-4 mb-6">
             {['pending', 'approved', 'rejected', 'processing'].map((status) => (
               <button
@@ -97,7 +107,7 @@ const SupervisorDashboard = () => {
               </thead>
               <tbody>
                 {contributions.map((c) => (
-                  <tr key={c.id} className="border-b border-border-subtle hover:bg-bg-main/50">
+                  <tr key={c.id} className="border-b border-border-subtle hover:bg-bg-main/30">
                     <td className="p-3 text-text-main font-medium">{c.word}</td>
                     <td className="p-3 text-text-muted">{c.contributor}</td>
                     <td className="p-3">
@@ -107,12 +117,9 @@ const SupervisorDashboard = () => {
                     </td>
                     <td className="p-3">
                       {c.video_url && (
-                        <button
-                          onClick={() => setSelectedVideo(c.video_url)}
-                          className="text-primary hover:underline flex items-center gap-1"
-                        >
+                        <a href={c.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                           <Eye className="w-4 h-4" /> View
-                        </button>
+                        </a>
                       )}
                     </td>
                     <td className="p-3 text-text-muted">{c.reviewer || '-'}</td>
@@ -122,18 +129,10 @@ const SupervisorDashboard = () => {
                     <td className="p-3">
                       {c.status === 'pending' && (
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => handleApprove(c.id)}
-                            className="p-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30"
-                            title="Approve"
-                          >
+                          <button onClick={() => handleApprove(c.id)} className="p-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30" title="Approve">
                             <Check className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleReject(c.id)}
-                            className="p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30"
-                            title="Reject"
-                          >
+                          <button onClick={() => handleReject(c.id)} className="p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30" title="Reject">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -153,20 +152,6 @@ const SupervisorDashboard = () => {
           </div>
         </div>
       </div>
-
-      {selectedVideo && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setSelectedVideo(null)}>
-          <div className="bg-bg-card p-6 rounded-2xl max-w-2xl w-full">
-            <div className="flex justify-between mb-4">
-              <h3 className="text-xl font-bold text-text-main">Video Preview</h3>
-              <button onClick={() => setSelectedVideo(null)} className="text-text-muted hover:text-text-main">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <video src={selectedVideo} controls className="w-full rounded-xl" />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
