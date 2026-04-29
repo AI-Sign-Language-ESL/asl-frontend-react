@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Check, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Check, ArrowLeft, Activity } from 'lucide-react';
 import classNames from 'classnames';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/api';
@@ -144,8 +144,17 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      await authService.login2FA({ user_id: twoFaUserId, token: code });
-      navigate('/home');
+      const data = await authService.login2FA({ user_id: twoFaUserId, token: code });
+      const loggedUser = data.user;
+      if (loggedUser?.is_superuser || loggedUser?.is_staff || loggedUser?.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (loggedUser?.role === 'supervisor') {
+        navigate('/supervisor');
+      } else if (loggedUser?.role === 'organization') {
+        navigate('/org-admin');
+      } else {
+        navigate('/home');
+      }
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid 2FA code.');
       setVerificationCode(['', '', '', '', '', '']);
@@ -560,7 +569,7 @@ const Login = () => {
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
-                            <Chrome className="w-5 h-5" />
+                            <Activity className="w-5 h-5" />
                             Continue with Google
                           </>
                         )}
