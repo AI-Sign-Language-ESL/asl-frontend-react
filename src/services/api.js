@@ -25,9 +25,17 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const url = err.config?.url || '';
+      const isAuthEndpoint = url.includes('/authentication/login') ||
+                           url.includes('/authentication/login/2fa') ||
+                           url.includes('/authentication/login/google') ||
+                           url.includes('/users/register');
+
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   }
