@@ -38,7 +38,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await register({
+      const response = await register({
         username: formData.username,
         first_name: formData.first_name,
         last_name: formData.last_name,
