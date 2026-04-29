@@ -374,6 +374,7 @@ const Meeting = () => {
 
   // Join meeting
   const joinMeeting = async (code, host = false) => {
+
     try {
       setMeetingCode(code); // Fix the blank meeting code issue
       // Join via REST API
@@ -397,14 +398,6 @@ const Meeting = () => {
       const ws = meetingWsService.connect(code, handleWsMessage);
       wsRef.current = ws;
 
-      // Add self to participants
-      setParticipants(prev => {
-        if (prev.find(p => p.username === user?.username)) return prev;
-        return [...prev, {
-          username: user?.username || 'You',
-          role: host ? 'host' : 'participant',
-        }];
-      });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to join meeting');
       setLoading(false);
@@ -478,13 +471,13 @@ const Meeting = () => {
     // Leave via API
     try {
       await meetingService.leave(meetingCode);
-    } catch (e) {}
+    } catch (e) { }
 
     // End meeting if host
     if (isHost) {
       try {
         await meetingService.end(meetingCode);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Reset state

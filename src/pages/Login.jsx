@@ -49,7 +49,28 @@ const Login = () => {
       setVerificationEmail(formData.email);
       setStep('verify');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const errorData = err.response?.data;
+      let errorMessage = 'Registration failed. Please try again.';
+      if (errorData) {
+        if (typeof errorData === 'object' && !errorData.message) {
+          const errors = [];
+          for (const [field, messages] of Object.entries(errorData)) {
+            if (Array.isArray(messages)) {
+              errors.push(...messages);
+            } else if (typeof messages === 'string') {
+              errors.push(messages);
+            }
+          }
+          if (errors.length > 0) {
+            errorMessage = errors.join(' ');
+          }
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -70,7 +91,7 @@ const Login = () => {
         navigate('/home');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      setError(err.response?.data?.detail || 'Email or password is wrong.');
     } finally {
       setLoading(false);
     }
