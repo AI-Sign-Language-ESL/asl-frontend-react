@@ -16,7 +16,7 @@ const SupervisorDashboard = () => {
       navigate('/supervisor-login');
       return;
     }
-    if (user?.role !== 'supervisor' && user?.role !== 'admin') {
+    if (user?.role !== 'supervisor') {
       navigate('/home');
       return;
     }

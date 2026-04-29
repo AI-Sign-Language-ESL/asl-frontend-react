@@ -26,10 +26,8 @@ const AdminLogin = () => {
 
       if (data?.user?.role === 'admin') {
         navigate('/admin/dashboard');
-      } else if (data?.user?.role === 'supervisor') {
-        navigate('/supervisor');
       } else {
-        setError('Access denied. Admin or Supervisor role required.');
+        setError('Access denied. Admin role required.');
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password.');
