@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const AdminLogin = () => {
+const SupervisorLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -18,18 +18,16 @@ const AdminLogin = () => {
 
     try {
       const data = await login(email, password);
-      
+
       if (data?.requires_2fa) {
-        setError('2FA not supported for admin login');
+        setError('2FA not supported for supervisor login');
         return;
       }
 
-      if (data?.user?.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (data?.user?.role === 'supervisor') {
+      if (data?.user?.role === 'supervisor') {
         navigate('/supervisor');
       } else {
-        setError('Access denied. Admin or Supervisor role required.');
+        setError('Access denied. Supervisor role required.');
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password.');
@@ -42,7 +40,7 @@ const AdminLogin = () => {
     <div className="min-h-screen w-full flex items-center justify-center p-6 bg-bg-main">
       <div className="w-full max-w-md glass rounded-2xl border border-border-subtle p-8 relative z-10">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-text-main">Admin Login</h1>
+          <h1 className="text-3xl font-bold text-text-main">Supervisor Login</h1>
           <p className="text-text-muted mt-2">Enter your credentials to access the dashboard</p>
         </div>
 
@@ -61,7 +59,7 @@ const AdminLogin = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@tafahom.io"
+                placeholder="supervisor@tafahom.io"
                 required
                 disabled={loading}
                 className="w-full bg-bg-card border border-border-subtle rounded-xl pl-12 pr-4 py-3.5 text-text-main"
@@ -96,10 +94,10 @@ const AdminLogin = () => {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/admin')}
             className="text-sm text-text-muted hover:text-primary"
           >
-            ← Back to main login
+            ← Admin login
           </button>
         </div>
       </div>
@@ -107,4 +105,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default SupervisorLogin;

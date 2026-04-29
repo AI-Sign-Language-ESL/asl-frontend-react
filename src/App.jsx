@@ -15,6 +15,7 @@ import Pricing from './pages/Pricing';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import AdminLogin from './pages/AdminLogin';
+import SupervisorLogin from './pages/SupervisorLogin';
 import OrgAdminLogin from './pages/OrgAdminLogin';
 import Meeting from './pages/Meeting';
 import ManagePlan from './pages/ManagePlan';
@@ -101,10 +102,11 @@ const AnimatedRoutes = () => {
           />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/supervisor-login" element={<SupervisorLogin />} />
           <Route
             path="/admin/dashboard"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
               </ProtectedRoute>
             }

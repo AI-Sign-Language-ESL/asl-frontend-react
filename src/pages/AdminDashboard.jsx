@@ -30,7 +30,7 @@ const AdminDashboard = () => {
       navigate('/admin');
       return;
     }
-    if (!user?.is_superuser && !user?.is_staff && user?.role !== 'admin') {
+    if (user?.role !== 'admin' && user?.role !== 'supervisor') {
       navigate('/home');
       return;
     }

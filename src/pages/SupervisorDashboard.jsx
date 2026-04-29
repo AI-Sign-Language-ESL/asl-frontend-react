@@ -13,10 +13,10 @@ const SupervisorDashboard = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/admin');
+      navigate('/supervisor-login');
       return;
     }
-    if (!user?.is_superuser && !user?.is_staff && user?.role !== 'supervisor' && user?.role !== 'admin') {
+    if (user?.role !== 'supervisor' && user?.role !== 'admin') {
       navigate('/home');
       return;
     }
