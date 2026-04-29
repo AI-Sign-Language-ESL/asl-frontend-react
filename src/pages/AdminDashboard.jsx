@@ -27,7 +27,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/admin-login');
+      navigate('/admin');
       return;
     }
     if (!user?.is_superuser && !user?.is_staff && user?.role !== 'admin') {

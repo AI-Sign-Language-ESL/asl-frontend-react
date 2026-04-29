@@ -25,7 +25,7 @@ const AdminLogin = () => {
       }
 
       if (data?.user?.role === 'admin' || data?.user?.role === 'supervisor') {
-        navigate('/admin-dashboard');
+        navigate('/admin/dashboard');
       } else {
         setError('Access denied. Admin or Supervisor role required.');
       }

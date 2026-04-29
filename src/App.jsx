@@ -101,9 +101,30 @@ const AnimatedRoutes = () => {
           />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/supervisor" element={<SupervisorDashboard />} />
-          <Route path="/org-admin" element={<OrganizationAdmin />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supervisor"
+            element={
+              <ProtectedRoute allowedRoles={['supervisor']}>
+                <SupervisorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/org-admin"
+            element={
+              <ProtectedRoute allowedRoles={['organization']}>
+                <OrganizationAdmin />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/meeting/:id"
             element={
@@ -136,9 +157,6 @@ const AnimatedRoutes = () => {
               </ProtectedRoute>
             }
           />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/supervisor" element={<SupervisorDashboard />} />
-          <Route path="/org-admin" element={<OrganizationAdmin />} />
         </Route>
 
         <Route
