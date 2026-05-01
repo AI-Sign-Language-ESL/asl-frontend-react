@@ -78,22 +78,22 @@ const Dataset = () => {
       await datasetService.contribute(formData);
       setStep(3);
     } catch (err) {
-      console.error('Upload error:', err);
+      console.error('Full upload error object:', err);
       let errorMsg = 'Upload failed. Please try again.';
-      if (err.response?.data) {
-        if (typeof err.response.data === 'string') {
-          errorMsg = err.response.data;
-        } else if (err.response.data.message) {
-          errorMsg = err.response.data.message;
-        } else if (err.response.data.detail) {
-          errorMsg = err.response.data.detail;
-        } else if (typeof err.response.data === 'object') {
-          // Extract the first error message from DRF validation object
-          const firstError = Object.values(err.response.data).flat()[0];
-          if (firstError) errorMsg = firstError;
+      
+      if (err.response) {
+        console.error('Error response data:', err.response.data);
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data && typeof data === 'object') {
+          errorMsg = data.message || data.detail || Object.values(data).flat()[0] || errorMsg;
         }
+      } else if (err.message) {
+        errorMsg = err.message;
       }
-      setError(errorMsg);
+      
+      setError(String(errorMsg));
     } finally {
       setSubmitting(false);
     }
