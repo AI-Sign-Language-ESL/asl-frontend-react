@@ -68,12 +68,13 @@ export const userService = {
   registerBasic: (data) => api.post('/users/register/basic/', data),
   registerOrg: (data) => api.post('/users/register/organization/', data),
 
-  // Admin
+   // Admin
   adminList: (params) => api.get('/users/admin/users/', { params }),
   adminDetail: (id) => api.get(`/users/admin/users/${id}/`),
   adminChangePlan: (userId, data) => api.post(`/users/admin/users/${userId}/change-plan/`, data),
   adminAddTokens: (userId, data) => api.post(`/users/admin/users/${userId}/add-tokens/`, data),
   adminRemoveTokens: (userId, data) => api.post(`/users/admin/users/${userId}/remove-tokens/`, data),
+  adminSubscriptionStatus: (userId, data) => api.post(`/users/admin/users/${userId}/subscription-status/`, data),
   adminTransactions: (params) => api.get('/users/admin/transactions/', { params }),
   adminStats: () => api.get('/users/admin/dashboard-stats/'),
 

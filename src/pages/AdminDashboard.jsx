@@ -101,6 +101,16 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSubscriptionStatus = async (status) => {
+    if (!selectedUser) return;
+    try {
+      await userService.adminSubscriptionStatus(selectedUser.id, { status });
+      loadData();
+    } catch (err) {
+      alert('Failed to update subscription status');
+    }
+  };
+
   const loadOrgMembers = async (org) => {
     setSelectedOrg(org);
     try {
@@ -202,6 +212,7 @@ const AdminDashboard = () => {
                   <th className="text-left p-3 text-text-muted">Email</th>
                   <th className="text-left p-3 text-text-muted">Role</th>
                   <th className="text-left p-3 text-text-muted">Plan</th>
+                  <th className="text-left p-3 text-text-muted">Subscription</th>
                   <th className="text-left p-3 text-text-muted">Tokens Used</th>
                   <th className="text-left p-3 text-text-muted">Bonus</th>
                   <th className="text-left p-3 text-text-muted">Actions</th>
@@ -223,6 +234,17 @@ const AdminDashboard = () => {
                       </span>
                     </td>
                     <td className="p-3 text-text-muted">{u.plan || 'N/A'}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        u.subscription_status === 'active' ? 'bg-green-500/20 text-green-500' :
+                        u.subscription_status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                        u.subscription_status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' :
+                        u.subscription_status === 'expired' ? 'bg-gray-500/20 text-gray-500' :
+                        'bg-gray-500/20 text-gray-500'
+                      }`}>
+                        {u.subscription_status || 'none'}
+                      </span>
+                    </td>
                     <td className="p-3 text-text-muted">{u.tokens_used || 0}</td>
                     <td className="p-3 text-text-muted">{u.bonus_tokens || 0}</td>
                     <td className="p-3">
@@ -247,6 +269,20 @@ const AdminDashboard = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
+                        <select
+                          value={u.subscription_status || 'none'}
+                          onChange={(e) => {
+                            setSelectedUser(u);
+                            handleSubscriptionStatus(e.target.value);
+                          }}
+                          className="text-xs bg-bg-main border border-border-subtle rounded-lg px-2 py-1 text-text-main"
+                          title="Change Subscription Status"
+                        >
+                          <option value="active">Active</option>
+                          <option value="pending">Pending</option>
+                          <option value="cancelled">Cancelled</option>
+                          <option value="expired">Expired</option>
+                        </select>
                         {u.role === 'organization' && (
                           <button
                             onClick={() => loadOrgMembers(u)}
