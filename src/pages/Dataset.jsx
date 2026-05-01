@@ -75,7 +75,7 @@ const Dataset = () => {
       formData.append('video', file);
       formData.append('word', label);
 
-      await datasetService.upload(formData);
+      await datasetService.contribute(formData);
       setStep(3);
     } catch (err) {
       setError(err.response?.data?.message || 'Upload failed. Please try again.');
