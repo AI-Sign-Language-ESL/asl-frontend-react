@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
+
       try {
         const response = await userService.me(); // ✅ FIX (authService.me didn't exist)
         setUser(response.data);

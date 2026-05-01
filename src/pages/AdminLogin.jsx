@@ -37,8 +37,18 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-bg-main">
-      <div className="w-full max-w-md glass rounded-2xl border border-border-subtle p-8 relative z-10">
+    <div className="min-h-screen w-full flex flex-col bg-bg-main relative">
+      <div className="absolute top-0 left-0 w-full p-6 flex justify-center items-center z-20">
+        <div className="flex items-center gap-2 sm:gap-3 group">
+          <img src="/tafahom-logo.png" alt="TAFAHOM Logo" className="h-8 sm:h-10 md:h-12 w-auto object-contain" />
+          <span className="text-lg sm:text-xl font-bold tracking-tight text-text-main group-hover:text-primary transition-colors">
+            TAFAHOM<span className="text-primary">.</span>
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center p-6 mt-16">
+        <div className="w-full max-w-md glass rounded-2xl border border-border-subtle p-8 relative z-10">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-text-main">Admin Login</h1>
           <p className="text-text-muted mt-2">Enter your credentials to access the dashboard</p>
@@ -99,6 +109,7 @@ const AdminLogin = () => {
           >
             ← Back to main login
           </button>
+        </div>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ import NotificationBell from './NotificationBell';
 
 const YoutubeIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M23.498 6.186a3.01 3.01 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.01 3.01 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.01 3.01 0 0 0 2.122 2.136c1.871.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.01 3.01 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    <path d="M23.498 6.186a3.01 3.01 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.01 3.01 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.01 3.01 0 0 0 2.122 2.136c1.871.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.01 3.01 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
   </svg>
 );
 
@@ -30,7 +30,7 @@ const Navbar = () => {
     { name: t('navbar.meetings'), path: '/meetings', icon: <Users className="w-5 h-5" /> },
     { name: t('navbar.dataset'), path: '/dataset', icon: <Database className="w-5 h-5" /> },
     { name: 'My Contributions', path: '/my-contributions', icon: <Database className="w-5 h-5" /> },
-    ...(user?.role === 'admin' || user?.role === 'supervisor' ? [{ name: 'Admin', path: '/admin-dashboard', icon: <Settings className="w-5 h-5" /> }] : []),
+    ...(user?.role === 'admin' || user?.role === 'supervisor' ? [{ name: 'Admin', path: '/dashboard', icon: <Settings className="w-5 h-5" /> }] : []),
     ...(user?.role === 'organization' ? [{ name: 'Org Admin', path: '/org-admin', icon: <Users className="w-5 h-5" /> }] : []),
     { name: t('navbar.pricing'), path: '/pricing', icon: <CreditCard className="w-5 h-5" /> },
   ];

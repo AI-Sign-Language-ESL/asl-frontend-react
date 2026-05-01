@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
 import { Link } from 'react-router-dom';
-import { Users, CreditCard, TrendingUp, Activity, Search, Edit2, Plus, Minus, Eye, LogOut, Info } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Activity, Search, Edit2, Plus, Minus, Eye, LogOut, Info, ChevronDown } from 'lucide-react';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -153,7 +153,7 @@ const AdminDashboard = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loadingData) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-bg-main p-6">
@@ -298,25 +298,27 @@ const AdminDashboard = () => {
                     </td>
                     <td className="p-3 text-text-muted">{u.plan || 'N/A'}</td>
                     <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          u.subscription_status === 'active' ? 'bg-green-500/20 text-green-500' :
-                          u.subscription_status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
-                          u.subscription_status === 'expired' ? 'bg-gray-500/20 text-gray-500' :
-                          'bg-yellow-500/20 text-yellow-500'
+                      <div className="relative inline-block w-full max-w-[140px]">
+                        <div className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-full text-xs font-medium border cursor-pointer transition-colors ${
+                          u.subscription_status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20' :
+                          u.subscription_status === 'cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20' :
+                          u.subscription_status === 'expired' ? 'bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500/20' :
+                          'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20'
                         }`}>
-                          {u.subscription_status === 'active' ? '✓ Paid' :
-                           u.subscription_status === 'cancelled' ? '✗ Cancelled' :
-                           u.subscription_status === 'expired' ? '⏱ Expired' :
-                           '⏳ No Subscription'}
-                        </span>
+                          <span>
+                            {u.subscription_status === 'active' ? '✓ Paid' :
+                             u.subscription_status === 'cancelled' ? '✗ Cancelled' :
+                             u.subscription_status === 'expired' ? '⏱ Expired' :
+                             '⏳ No Subscription'}
+                          </span>
+                          <ChevronDown className="w-3 h-3 opacity-70 flex-shrink-0" />
+                        </div>
                         <select
                           value={u.subscription_status || 'no_subscription'}
-                          onChange={(e) => {
-                            handleSubscriptionStatus(u.id, e.target.value);
-                          }}
-                          className="text-xs bg-bg-main border border-border-subtle rounded-lg px-2 py-1 text-text-main"
+                          onChange={(e) => handleSubscriptionStatus(u.id, e.target.value)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
                         >
+                          <option value="no_subscription" disabled>Select status...</option>
                           <option value="active">✓ Mark as Paid</option>
                           <option value="pending">⏳ Mark Pending</option>
                           <option value="cancelled">✗ Cancel (Refund)</option>

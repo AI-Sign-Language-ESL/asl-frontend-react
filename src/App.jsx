@@ -103,16 +103,8 @@ const AnimatedRoutes = () => {
           />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/payment" element={<PaymentCheckout />} />
-          <Route path="/admin" element={<AdminLogin />} />
           <Route path="/supervisor-login" element={<SupervisorLogin />} />
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
+
           <Route
             path="/supervisor"
             element={
@@ -167,6 +159,15 @@ const AnimatedRoutes = () => {
           path="/login"
           element={
             <Login />
+          }
+        />
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
           }
         />
       </Routes>
