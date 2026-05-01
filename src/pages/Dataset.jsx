@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, CheckCircle2, Tag, Video, Loader2, X, AlertCircle } from 'lucide-react';
 import classNames from 'classnames';
+import { Link } from 'react-router-dom';
 import { datasetService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -99,6 +100,12 @@ const Dataset = () => {
         <p className="text-text-muted text-lg max-w-2xl mx-auto">
           Help us build the largest open-source dataset for Egyptian Sign Language. Your contribution directly improves the AI's accuracy.
         </p>
+        <div className="flex justify-center mt-6">
+          <Link to="/my-contributions" className="flex items-center gap-2 px-6 py-2.5 rounded-full glass border border-white/10 hover:bg-white/5 transition-colors text-text-main font-medium shadow-sm">
+            <CheckCircle2 className="w-4 h-4 text-primary" />
+            View My Contributions
+          </Link>
+        </div>
       </div>
 
       {/* Progress Indicators */}

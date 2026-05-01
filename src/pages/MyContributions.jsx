@@ -23,7 +23,7 @@ const MyContributions = () => {
   const loadContributions = async () => {
     try {
       const res = await datasetService.myContributions();
-      const data = res.data;
+      const data = res.data.results || res.data;
 
       setContributions(data);
 
