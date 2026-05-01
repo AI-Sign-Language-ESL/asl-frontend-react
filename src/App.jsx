@@ -24,6 +24,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
 import OrganizationAdmin from './pages/OrganizationAdmin';
 import MyContributions from './pages/MyContributions';
+import PaymentCheckout from './pages/PaymentCheckout';
 
 import { useAuth } from './context/AuthContext';
 
@@ -101,6 +102,7 @@ const AnimatedRoutes = () => {
             }
           />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/payment" element={<PaymentCheckout />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/supervisor-login" element={<SupervisorLogin />} />
           <Route

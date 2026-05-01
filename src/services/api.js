@@ -75,6 +75,7 @@ export const userService = {
   adminAddTokens: (userId, data) => api.post(`/users/admin/users/${userId}/add-tokens/`, data),
   adminRemoveTokens: (userId, data) => api.post(`/users/admin/users/${userId}/remove-tokens/`, data),
   adminSubscriptionStatus: (userId, data) => api.post(`/users/admin/users/${userId}/subscription-status/`, data),
+  adminPaymentTransactions: (params) => api.get('/billing/payment/transactions/', { params }),
   adminTransactions: (params) => api.get('/users/admin/transactions/', { params }),
   adminStats: () => api.get('/users/admin/dashboard-stats/'),
 

@@ -2,48 +2,82 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star } from 'lucide-react';
 import classNames from 'classnames';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+const plans = [
+  {
+    name: "Free",
+    desc: "Essential communication for everyone.",
+    price: "0",
+    plan_type: "free",
+    features: [
+      "Basic translation (Text & Voice)",
+      "Standard 3D Avatar Quality",
+      "Limited daily recognition minutes",
+      "Community Support"
+    ]
+  },
+  {
+    name: "Pro",
+    desc: "For professionals and daily active users.",
+    price: "12",
+    yearlyPrice: "120",
+    popular: true,
+    plan_type: "premium",
+    features: [
+      "Everything in Free",
+      "Unlimited Real-time tracking",
+      "HD 3D Avatar rendering",
+      "EgypTalk Premium Voices",
+      "Priority Email Support"
+    ]
+  },
+  {
+    name: "Enterprise",
+    desc: "Custom solutions for hospitals & schools.",
+    price: "Custom",
+    plan_type: "enterprise",
+    features: [
+      "Dedicated API Access",
+      "Custom vocabulary models",
+      "On-premise deployment options",
+      "24/7 Phone Support",
+      "SLA Guarantee"
+    ]
+  }
+];
 
 const Pricing = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [isYearly, setIsYearly] = useState(false);
 
-  const plans = [
-    {
-      name: "Free",
-      desc: "Essential communication for everyone.",
-      price: "0",
-      features: [
-        "Basic translation (Text & Voice)",
-        "Standard 3D Avatar Quality",
-        "Limited daily recognition minutes",
-        "Community Support"
-      ]
-    },
-    {
-      name: "Pro",
-      desc: "For professionals and daily active users.",
-      price: isYearly ? "120" : "12",
-      popular: true,
-      features: [
-        "Everything in Free",
-        "Unlimited Real-time tracking",
-        "HD 3D Avatar rendering",
-        "EgypTalk Premium Voices",
-        "Priority Email Support"
-      ]
-    },
-    {
-      name: "Enterprise",
-      desc: "Custom solutions for hospitals & schools.",
-      price: "Custom",
-      features: [
-        "Dedicated API Access",
-        "Custom vocabulary models",
-        "On-premise deployment options",
-        "24/7 Phone Support",
-        "SLA Guarantee"
-      ]
+  const handleGetStarted = (plan) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
     }
-  ];
+
+    if (plan.plan_type === 'free') {
+      navigate('/home');
+      return;
+    }
+
+    if (plan.plan_type === 'enterprise') {
+      // Contact sales logic
+      alert('Please contact sales@tafahom.io');
+      return;
+    }
+
+    // Redirect to payment page
+    navigate('/payment', {
+      state: {
+        plan: plan.plan_type,
+        price: isYearly ? plan.yearlyPrice : plan.price
+      }
+    });
+  };
 
   return (
     <div className="flex flex-col items-center pb-24 w-full max-w-6xl mx-auto">
@@ -112,12 +146,14 @@ const Pricing = () => {
               ))}
             </ul>
 
-            <button className={classNames(
-              "w-full py-4 rounded-xl font-bold transition-all mt-auto",
-              plan.popular 
-                ? "bg-primary hover:bg-secondary text-white shadow-lg shadow-primary/25" 
-                : "bg-bg-card border border-border-subtle text-text-main hover:bg-border-subtle"
-            )}>
+            <button 
+              onClick={() => handleGetStarted(plan)}
+              className={classNames(
+                "w-full py-4 rounded-xl font-bold transition-all mt-auto",
+                plan.popular 
+                  ? "bg-primary hover:bg-secondary text-white shadow-lg shadow-primary/25" 
+                  : "bg-bg-card border border-border-subtle text-text-main hover:bg-border-subtle"
+              )}>
               {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
             </button>
           </motion.div>

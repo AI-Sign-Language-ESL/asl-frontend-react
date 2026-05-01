@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
 import { Link } from 'react-router-dom';
-import { Users, CreditCard, TrendingUp, Activity, Search, Edit2, Plus, Minus, Eye } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Activity, Search, Edit2, Plus, Minus, Eye, LogOut, Info } from 'lucide-react';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -20,10 +20,16 @@ const AdminDashboard = () => {
   const [tokenAmount, setTokenAmount] = useState('');
   const [tokenReason, setTokenReason] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('');
-  const [actionType, setActionType] = useState('add');
+  const [tokenAction, setTokenAction] = useState('add');
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [orgMembers, setOrgMembers] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentTransactions, setPaymentTransactions] = useState([]);
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
+  const [userDetails, setUserDetails] = useState(null);
+  const [userTransactions, setUserTransactions] = useState([]);
+  const [loadingUserDetails, setLoadingUserDetails] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -111,6 +117,31 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleViewUserDetails = async (u) => {
+    setSelectedUser(u);
+    setShowUserDetailsModal(true);
+    setLoadingUserDetails(true);
+    try {
+      const [detailRes, txRes] = await Promise.all([
+        userService.adminDetail(u.id),
+        userService.adminPaymentTransactions({ user_id: u.id })
+      ]);
+      setUserDetails(detailRes.data);
+      setUserTransactions(txRes.data.results || txRes.data || []);
+    } catch (err) {
+      console.error('Failed to load user details', err);
+      try {
+        const detailRes = await userService.adminDetail(u.id);
+        setUserDetails(detailRes.data);
+        setUserTransactions([]);
+      } catch (e) {
+        console.error('Fallback failed', e);
+      }
+    } finally {
+      setLoadingUserDetails(false);
+    }
+  };
+
   const loadOrgMembers = async (org) => {
     setSelectedOrg(org);
     try {
@@ -130,7 +161,13 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-text-main">Admin Dashboard</h1>
-          <Link to="/home" className="text-primary hover:underline">Back to Home</Link>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 bg-red-500/20 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/30"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
         </div>
 
         {stats && (
@@ -154,7 +191,18 @@ const AdminDashboard = () => {
               <p className="text-3xl font-bold text-text-main">{stats.subscriptions.active}</p>
             </div>
 
-            <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle">
+            <div 
+              className="bg-bg-card p-6 rounded-2xl border border-border-subtle cursor-pointer hover:border-primary transition-colors"
+              onClick={async () => {
+                try {
+                  const res = await userService.adminPaymentTransactions();
+                  setPaymentTransactions(res.data.results || res.data || []);
+                  setShowPaymentModal(true);
+                } catch (err) {
+                  console.error('Failed to load transactions', err);
+                }
+              }}
+            >
               <div className="flex items-center gap-3 mb-2">
                 <TrendingUp className="w-5 h-5 text-secondary" />
                 <span className="text-text-muted">Transactions</span>
@@ -212,7 +260,7 @@ const AdminDashboard = () => {
                   <th className="text-left p-3 text-text-muted">Email</th>
                   <th className="text-left p-3 text-text-muted">Role</th>
                   <th className="text-left p-3 text-text-muted">Plan</th>
-                  <th className="text-left p-3 text-text-muted">Subscription</th>
+                  <th className="text-left p-3 text-text-muted">Payment Status</th>
                   <th className="text-left p-3 text-text-muted">Tokens Used</th>
                   <th className="text-left p-3 text-text-muted">Bonus</th>
                   <th className="text-left p-3 text-text-muted">Actions</th>
@@ -235,58 +283,79 @@ const AdminDashboard = () => {
                     </td>
                     <td className="p-3 text-text-muted">{u.plan || 'N/A'}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        u.subscription_status === 'active' ? 'bg-green-500/20 text-green-500' :
-                        u.subscription_status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
-                        u.subscription_status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' :
-                        u.subscription_status === 'expired' ? 'bg-gray-500/20 text-gray-500' :
-                        'bg-gray-500/20 text-gray-500'
-                      }`}>
-                        {u.subscription_status || 'none'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          u.subscription_status === 'active' ? 'bg-green-500/20 text-green-500' :
+                          u.subscription_status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                          u.subscription_status === 'expired' ? 'bg-gray-500/20 text-gray-500' :
+                          'bg-yellow-500/20 text-yellow-500'
+                        }`}>
+                          {u.subscription_status === 'active' ? '✓ Paid' :
+                           u.subscription_status === 'cancelled' ? '✗ Cancelled' :
+                           u.subscription_status === 'expired' ? '⏱ Expired' :
+                           '⏳ No Subscription'}
+                        </span>
+                        <select
+                          value={u.subscription_status || 'no_subscription'}
+                          onChange={(e) => {
+                            setSelectedUser(u);
+                            handleSubscriptionStatus(e.target.value);
+                          }}
+                          className="text-xs bg-bg-main border border-border-subtle rounded-lg px-2 py-1 text-text-main"
+                        >
+                          <option value="active">✓ Mark as Paid</option>
+                          <option value="cancelled">✗ Cancel (Refund)</option>
+                          <option value="expired">⏱ Mark Expired</option>
+                        </select>
+                      </div>
                     </td>
                     <td className="p-3 text-text-muted">{u.tokens_used || 0}</td>
                     <td className="p-3 text-text-muted">{u.bonus_tokens || 0}</td>
                     <td className="p-3">
                       <div className="flex gap-2">
                         <button
+                          onClick={() => handleViewUserDetails(u)}
+                          className="p-2 bg-indigo-500/20 text-indigo-500 rounded-lg hover:bg-indigo-500/30"
+                          title="View Details"
+                        >
+                          <Info className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedUser(u);
+                            setTokenAction('add');
                             setShowTokenModal(true);
                           }}
-                          className="p-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30"
-                          title="Manage Tokens"
+                          className="p-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30"
+                          title="Add Tokens"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => {
                             setSelectedUser(u);
+                            setTokenAction('remove');
+                            setShowTokenModal(true);
+                          }}
+                          className="p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30"
+                          title="Remove Tokens"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedUser(u);
                             setShowPlanModal(true);
                           }}
-                          className="p-2 bg-secondary/20 text-secondary rounded-lg hover:bg-secondary/30"
+                          className="p-2 bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/30"
                           title="Change Plan"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <select
-                          value={u.subscription_status || 'none'}
-                          onChange={(e) => {
-                            setSelectedUser(u);
-                            handleSubscriptionStatus(e.target.value);
-                          }}
-                          className="text-xs bg-bg-main border border-border-subtle rounded-lg px-2 py-1 text-text-main"
-                          title="Change Subscription Status"
-                        >
-                          <option value="active">Active</option>
-                          <option value="pending">Pending</option>
-                          <option value="cancelled">Cancelled</option>
-                          <option value="expired">Expired</option>
-                        </select>
                         {u.role === 'organization' && (
                           <button
                             onClick={() => loadOrgMembers(u)}
-                            className="p-2 bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/30"
+                            className="p-2 bg-purple-500/20 text-purple-500 rounded-lg hover:bg-purple-500/30"
                             title="View Members"
                           >
                             <Eye className="w-4 h-4" />
@@ -305,20 +374,9 @@ const AdminDashboard = () => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle w-full max-w-md">
               <h3 className="text-xl font-bold text-text-main mb-4">
-                Manage Tokens - {selectedUser.username}
+                {tokenAction === 'add' ? 'Add Tokens' : 'Remove Tokens'} - {selectedUser.username}
               </h3>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-text-muted mb-2">Action</label>
-                  <select
-                    value={actionType}
-                    onChange={(e) => setActionType(e.target.value)}
-                    className="w-full bg-bg-main border border-border-subtle rounded-xl px-4 py-2 text-text-main"
-                  >
-                    <option value="add">Add Tokens</option>
-                    <option value="remove">Remove Tokens</option>
-                  </select>
-                </div>
                 <div>
                   <label className="block text-sm text-text-muted mb-2">Amount</label>
                   <input
@@ -351,10 +409,12 @@ const AdminDashboard = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={actionType === 'add' ? handleAddTokens : handleRemoveTokens}
-                    className="flex-1 bg-primary text-white py-2 rounded-xl"
+                    onClick={tokenAction === 'add' ? handleAddTokens : handleRemoveTokens}
+                    className={`flex-1 text-white py-2 rounded-xl ${
+                      tokenAction === 'add' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+                    }`}
                   >
-                    {actionType === 'add' ? 'Add' : 'Remove'}
+                    {tokenAction === 'add' ? 'Add' : 'Remove'}
                   </button>
                 </div>
               </div>
@@ -442,6 +502,173 @@ const AdminDashboard = () => {
                       <tr>
                         <td colSpan="4" className="p-4 text-center text-text-muted">
                           No members found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showUserDetailsModal && selectedUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-text-main">
+                  User Details: {selectedUser.username}
+                </h3>
+                <button
+                  onClick={() => setShowUserDetailsModal(false)}
+                  className="text-text-muted hover:text-text-main"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {loadingUserDetails ? (
+                <div className="text-center py-8 text-text-muted">Loading details...</div>
+              ) : (
+                <div className="space-y-8">
+                  <div>
+                    <h4 className="text-lg font-semibold text-text-main mb-4 border-b border-border-subtle pb-2">Profile Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-text-muted">Username</p>
+                        <p className="text-text-main font-medium">{userDetails?.username || selectedUser.username}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-text-muted">Email</p>
+                        <p className="text-text-main font-medium">{userDetails?.email || selectedUser.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-text-muted">Role</p>
+                        <p className="text-text-main font-medium">{userDetails?.role || selectedUser.role}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-text-muted">Date Joined</p>
+                        <p className="text-text-main font-medium">
+                          {userDetails?.date_joined ? new Date(userDetails.date_joined).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-text-muted">Current Plan</p>
+                        <p className="text-text-main font-medium">{userDetails?.plan || selectedUser.plan || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-text-muted">Subscription Status</p>
+                        <p className="text-text-main font-medium">{userDetails?.subscription_status || selectedUser.subscription_status || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-text-muted">Tokens Used</p>
+                        <p className="text-text-main font-medium">{userDetails?.tokens_used ?? selectedUser.tokens_used ?? 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-text-muted">Bonus Tokens</p>
+                        <p className="text-text-main font-medium">{userDetails?.bonus_tokens ?? selectedUser.bonus_tokens ?? 0}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-semibold text-text-main mb-4 border-b border-border-subtle pb-2">Subscription & Payment History</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border-subtle">
+                            <th className="text-left p-3 text-text-muted">Transaction ID</th>
+                            <th className="text-left p-3 text-text-muted">Amount</th>
+                            <th className="text-left p-3 text-text-muted">Status</th>
+                            <th className="text-left p-3 text-text-muted">Provider</th>
+                            <th className="text-left p-3 text-text-muted">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userTransactions.map((tx) => (
+                            <tr key={tx.id || tx.transaction_id} className="border-b border-border-subtle hover:bg-bg-main/30">
+                              <td className="p-3 text-text-main font-mono text-sm">{tx.transaction_id || tx.id}</td>
+                              <td className="p-3 text-text-main">${tx.amount || 0}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-1 rounded-full text-xs capitalize ${
+                                  tx.status === 'completed' || tx.status === 'successful' || tx.status === 'succeeded' ? 'bg-green-500/20 text-green-500' :
+                                  tx.status === 'failed' ? 'bg-red-500/20 text-red-500' :
+                                  tx.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' :
+                                  tx.status === 'refunded' ? 'bg-orange-500/20 text-orange-500' :
+                                  'bg-gray-500/20 text-gray-500'
+                                }`}>
+                                  {tx.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-text-muted">{tx.provider || 'N/A'}</td>
+                              <td className="p-3 text-text-muted">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : 'N/A'}</td>
+                            </tr>
+                          ))}
+                          {userTransactions.length === 0 && (
+                            <tr>
+                              <td colSpan="5" className="p-4 text-center text-text-muted">
+                                No transactions found for this user
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle w-full max-w-4xl max-h-150 overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-text-main">Payment Transactions</h3>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="text-text-muted hover:text-text-main"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border-subtle">
+                      <th className="text-left p-3 text-text-muted">Transaction ID</th>
+                      <th className="text-left p-3 text-text-muted">User</th>
+                      <th className="text-left p-3 text-text-muted">Amount</th>
+                      <th className="text-left p-3 text-text-muted">Status</th>
+                      <th className="text-left p-3 text-text-muted">Provider</th>
+                      <th className="text-left p-3 text-text-muted">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentTransactions.map((tx) => (
+                      <tr key={tx.id} className="border-b border-border-subtle hover:bg-bg-main/30">
+                        <td className="p-3 text-text-main font-mono text-sm">{tx.transaction_id}</td>
+                        <td className="p-3 text-text-muted">{tx.user}</td>
+                        <td className="p-3 text-text-main">${tx.amount}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            tx.status === 'completed' ? 'bg-green-500/20 text-green-500' :
+                            tx.status === 'failed' ? 'bg-red-500/20 text-red-500' :
+                            tx.status === 'refunded' ? 'bg-yellow-500/20 text-yellow-500' :
+                            'bg-gray-500/20 text-gray-500'
+                          }`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-text-muted">{tx.provider}</td>
+                        <td className="p-3 text-text-muted">{new Date(tx.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                    {paymentTransactions.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="p-4 text-center text-text-muted">
+                          No payment transactions found
                         </td>
                       </tr>
                     )}
