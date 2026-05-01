@@ -107,10 +107,9 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSubscriptionStatus = async (status) => {
-    if (!selectedUser) return;
+  const handleSubscriptionStatus = async (userId, status) => {
     try {
-      await userService.adminSubscriptionStatus(selectedUser.id, { status });
+      await userService.adminSubscriptionStatus(userId, { status });
       loadData();
     } catch (err) {
       alert('Failed to update subscription status');
@@ -161,13 +160,29 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-text-main">Admin Dashboard</h1>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 bg-red-500/20 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/30"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={async () => {
+                try {
+                  const res = await userService.adminPaymentTransactions();
+                  setPaymentTransactions(res.data.results || res.data || []);
+                  setShowPaymentModal(true);
+                } catch (err) {
+                  console.error('Failed to load transactions', err);
+                }
+              }}
+              className="flex items-center gap-2 bg-green-500/20 text-green-500 px-4 py-2 rounded-xl hover:bg-green-500/30 font-medium"
+            >
+              🟢 View Payments
+            </button>
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 bg-red-500/20 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/30 font-medium"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
         </div>
 
         {stats && (
@@ -298,12 +313,12 @@ const AdminDashboard = () => {
                         <select
                           value={u.subscription_status || 'no_subscription'}
                           onChange={(e) => {
-                            setSelectedUser(u);
-                            handleSubscriptionStatus(e.target.value);
+                            handleSubscriptionStatus(u.id, e.target.value);
                           }}
                           className="text-xs bg-bg-main border border-border-subtle rounded-lg px-2 py-1 text-text-main"
                         >
                           <option value="active">✓ Mark as Paid</option>
+                          <option value="pending">⏳ Mark Pending</option>
                           <option value="cancelled">✗ Cancel (Refund)</option>
                           <option value="expired">⏱ Mark Expired</option>
                         </select>
