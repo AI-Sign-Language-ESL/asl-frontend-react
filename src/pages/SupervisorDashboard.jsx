@@ -26,7 +26,7 @@ const SupervisorDashboard = () => {
   const loadContributions = async () => {
     try {
       const res = await userService.supervisorContributions({ status: statusFilter });
-      setContributions(res.data);
+      setContributions(res.data.results || res.data);
     } catch (err) {
       console.error('Failed to load contributions', err);
     } finally {

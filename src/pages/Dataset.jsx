@@ -78,7 +78,22 @@ const Dataset = () => {
       await datasetService.contribute(formData);
       setStep(3);
     } catch (err) {
-      setError(err.response?.data?.message || 'Upload failed. Please try again.');
+      console.error('Upload error:', err);
+      let errorMsg = 'Upload failed. Please try again.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        } else if (err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.response.data.detail) {
+          errorMsg = err.response.data.detail;
+        } else if (typeof err.response.data === 'object') {
+          // Extract the first error message from DRF validation object
+          const firstError = Object.values(err.response.data).flat()[0];
+          if (firstError) errorMsg = firstError;
+        }
+      }
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }

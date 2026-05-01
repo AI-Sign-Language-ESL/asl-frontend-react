@@ -100,10 +100,7 @@ export const translationService = {
   myRequests: () => api.get('/translation/requests/me/'),
   getStatus: (id) => api.get(`/translation/status/${id}/`),
   toSign: (data) => api.post('/translation/to-sign/', data),
-  speechToText: (formData) =>
-    api.post('/translation/speech-to-text/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  speechToText: (formData) => api.post('/translation/speech-to-text/', formData),
   getSignLanguages: () => api.get('/translation/sign-languages/'),
 };
 
@@ -111,9 +108,7 @@ export const translatorService = {
   translate: (videoBlob) => {
     const formData = new FormData();
     formData.append('video', videoBlob);
-    return api.post('/translation/translate/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return api.post('/translation/translate/', formData);
   },
 };
 
@@ -140,10 +135,7 @@ export const meetingService = {
 // DATASET
 // =========================
 export const datasetService = {
-  contribute: (formData) =>
-    api.post('/dataset/contributions/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  contribute: (formData) => api.post('/dataset/contributions/', formData),
   myContributions: () => api.get('/dataset/contributions/me/'),
   pending: () => api.get('/dataset/admin/contributions/pending/'),
   approve: (id) => api.post(`/dataset/admin/contributions/${id}/approve/`),
