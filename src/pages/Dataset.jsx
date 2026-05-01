@@ -87,13 +87,16 @@ const Dataset = () => {
         if (typeof data === 'string') {
           errorMsg = data;
         } else if (data && typeof data === 'object') {
-          errorMsg = data.message || data.detail || Object.values(data).flat()[0] || errorMsg;
+          // Try to extract the most descriptive error
+          const firstVal = Object.values(data).flat()[0];
+          errorMsg = data.message || data.detail || data.error || (typeof firstVal === 'string' ? firstVal : JSON.stringify(data));
         }
       } else if (err.message) {
         errorMsg = err.message;
       }
       
-      setError(String(errorMsg));
+      // Ensure we have a clean string for the UI
+      setError(String(errorMsg).substring(0, 255));
     } finally {
       setSubmitting(false);
     }
