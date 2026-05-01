@@ -44,11 +44,11 @@ const Dataset = () => {
   };
 
   const validateAndSetFile = (selectedFile) => {
-    const validTypes = ['video/mp4', 'video/webm'];
+    const validTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
     const maxSize = 50 * 1024 * 1024;
 
-    if (!validTypes.includes(selectedFile.type)) {
-      setError('Please upload MP4 or WebM files only.');
+    if (!validTypes.includes(selectedFile.type) && !selectedFile.name.toLowerCase().endsWith('.mov')) {
+      setError('Please upload MP4, WebM, or MOV files only.');
       return;
     }
     if (selectedFile.size > maxSize) {
@@ -72,7 +72,7 @@ const Dataset = () => {
     try {
       const formData = new FormData();
       formData.append('video', file);
-      formData.append('label', label);
+      formData.append('word', label);
 
       await datasetService.upload(formData);
       setStep(3);
@@ -156,14 +156,14 @@ const Dataset = () => {
                 >
                   <input
                     type="file"
-                    accept="video/mp4,video/webm"
+                    accept="video/mp4,video/webm,video/quicktime,.mov"
                     onChange={handleFileChange}
                     className="hidden"
                     id="video-upload"
                   />
                   <label htmlFor="video-upload" className="cursor-pointer flex flex-col items-center gap-2 w-full h-full justify-center">
                     <span className="font-medium text-text-muted group-hover:text-white transition-colors">Drag & drop or Click to browse</span>
-                    <span className="text-xs text-text-muted/60">MP4 or WebM, Max 50MB</span>
+                    <span className="text-xs text-text-muted/60">MP4, WebM, or MOV (Max 50MB)</span>
                   </label>
                 </div>
               </>
