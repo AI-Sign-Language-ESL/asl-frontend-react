@@ -128,6 +128,10 @@ const OrganizationAdmin = () => {
               <p className="text-text-muted text-sm">Total Members</p>
               <p className="text-text-main font-medium">{members.length}</p>
             </div>
+            <div>
+              <p className="text-text-muted text-sm">Your Shared Balance</p>
+              <p className="text-text-main font-bold text-lg text-primary">{user?.bonus_tokens || 0} Tokens</p>
+            </div>
           </div>
         </div>
 

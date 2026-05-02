@@ -44,6 +44,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Handle Organization Subscription Gating
+  if (user?.role === 'organization' && user?.subscription_status === 'pending') {
+    const allowedPaths = ['/pricing', '/payment-checkout', '/settings'];
+    if (!allowedPaths.includes(location.pathname)) {
+      return <Navigate to="/pricing" replace />;
+    }
+  }
+
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/home" replace />;
   }
