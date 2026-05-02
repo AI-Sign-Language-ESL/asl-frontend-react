@@ -19,6 +19,8 @@ const Login = () => {
   const [twoFaUserId, setTwoFaUserId] = useState(null);
   const [showUserTypeModal, setShowUserTypeModal] = useState(false);
   const [userType, setUserType] = useState('basic');
+  const [showOrgPaymentModal, setShowOrgPaymentModal] = useState(false);
+  const [pendingOrgEmail, setPendingOrgEmail] = useState('');
 
   const [formData, setFormData] = useState({
     username: '',
@@ -180,8 +182,8 @@ const Login = () => {
     try {
       const data = await verifyEmail(verificationEmail, code);
       if (data.requires_payment) {
-        // Show popup for organization admins
-        alert('You must subscribe to the Premium plan to activate your organization account. Please contact the website admin.');
+        setPendingOrgEmail(data.email);
+        setShowOrgPaymentModal(true);
         return;
       }
       navigate('/home');
@@ -767,6 +769,54 @@ const Login = () => {
         </div>
       </div>
     </div>
+
+    {/* Org Payment Required Modal */}
+    <AnimatePresence>
+      {showOrgPaymentModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowOrgPaymentModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-bg-card border border-border-subtle rounded-2xl p-8 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Activity className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-text-main mb-2">Premium Plan Required</h3>
+              <p className="text-text-muted mb-6">
+                You must subscribe to the <span className="text-primary font-semibold">Premium Plan</span> to activate your organization account.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowOrgPaymentModal(false)}
+                  className="flex-1 py-3 px-4 border border-border-subtle rounded-xl text-text-muted hover:text-text-main transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setShowOrgPaymentModal(false);
+                    navigate('/payment?plan=premium&email=' + pendingOrgEmail);
+                  }}
+                  className="flex-1 py-3 px-4 bg-primary hover:bg-secondary text-white rounded-xl font-semibold transition-all"
+                >
+                  Go to Payment
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
