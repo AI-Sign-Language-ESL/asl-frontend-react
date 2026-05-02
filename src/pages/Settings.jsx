@@ -388,6 +388,27 @@ const [resetLoading, setResetLoading] = useState(false);
                     <span className="px-2.5 py-1 rounded-full bg-success/20 text-success text-xs font-medium">Verified</span>
                   </div>
 
+                  {/* Organization Code Row */}
+                  {user?.org_code && (
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Building className="w-4 h-4 text-text-muted" />
+                        <div>
+                          <p className="text-xs text-text-muted">Organization Code</p>
+                          <p className="text-sm font-mono font-medium text-text-main tracking-wider">{user.org_code}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(user.org_code);
+                          setSuccess('Organization code copied to clipboard!');
+                        }}
+                        className="px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium cursor-pointer"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  )}
 
                   {/* Plan Row */}
                   <div className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
