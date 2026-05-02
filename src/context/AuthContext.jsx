@@ -121,9 +121,14 @@ export const AuthProvider = ({ children }) => {
   // =========================
   // REGISTER (FIXED)
   // =========================
-  const register = async (userData) => {
-    // ✅ FIX: correct API call
-    const response = await userService.registerBasic(userData);
+  const register = async (userData, userType = 'basic') => {
+    // ✅ FIX: call correct API endpoint based on userType
+    let response;
+    if (userType === 'organization') {
+      response = await userService.registerOrg(userData);
+    } else {
+      response = await userService.registerBasic(userData);
+    }
 
     const data = response.data;
 

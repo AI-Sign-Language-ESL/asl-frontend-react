@@ -58,12 +58,15 @@ const Login = () => {
         registerData.org_code = formData.org_code;
       } else if (userType === 'organization') {
         registerData.username = formData.username;
-        registerData.first_name = formData.organization_name;
-        registerData.last_name = formData.activity_type;
+        // Backend serializer requires first_name and last_name, so we map them
+        registerData.first_name = formData.organization_name.substring(0, 30);
+        registerData.last_name = formData.activity_type.substring(0, 30);
+        registerData.organization_name = formData.organization_name;
+        registerData.activity_type = formData.activity_type;
         registerData.job_title = formData.job_title;
       }
 
-      await register(registerData);
+      await register(registerData, userType);
       setVerificationEmail(formData.email);
       setStep('verify');
     } catch (err) {
