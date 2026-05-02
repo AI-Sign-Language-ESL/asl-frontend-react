@@ -590,7 +590,20 @@ const Login = () => {
 
                   <div className="mt-8 text-center text-sm text-text-muted">
                     {isLogin ? "Don't have an account? " : "Already have an account? "}
-                    <button onClick={() => { setIsLogin(!isLogin); setError(''); }} className="text-text-main font-semibold hover:text-primary transition-colors" disabled={loading || googleLoading}>
+                    <button 
+                      onClick={() => { 
+                        console.log("Sign up button clicked. isLogin:", isLogin);
+                        if (isLogin) {
+                          console.log("Showing User Type Modal");
+                          setShowUserTypeModal(true);
+                        } else {
+                          setIsLogin(true);
+                        }
+                        setError(''); 
+                      }} 
+                      className="text-text-main font-semibold hover:text-primary transition-colors" 
+                      disabled={loading || googleLoading}
+                    >
                       {isLogin ? 'Sign up' : 'Sign in'}
                     </button>
                   </div>
