@@ -156,6 +156,11 @@ export const AuthProvider = ({ children }) => {
     const response = await authService.verifyEmail({ email, code });
     const data = response.data;
 
+    // Organization accounts: requires payment, don't authenticate yet
+    if (data.requires_payment) {
+      return data;
+    }
+
     if (data.access) {
       localStorage.setItem('token', data.access);
     }

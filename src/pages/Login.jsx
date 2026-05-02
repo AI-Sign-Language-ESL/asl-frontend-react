@@ -178,11 +178,16 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      await verifyEmail(verificationEmail, code);
+      const data = await verifyEmail(verificationEmail, code);
+      if (data.requires_payment) {
+        // Show popup for organization admins
+        alert('You must subscribe to the Premium plan to activate your organization account. Please contact the website admin.');
+        return;
+      }
       navigate('/home');
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid verification code.');
-      setVerificationCode(['', '', '', '', '', '']);
+      setVerificationCode(['', '', '', '', '']);
       codeInputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
