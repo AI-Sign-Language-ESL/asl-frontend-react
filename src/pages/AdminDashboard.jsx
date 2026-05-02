@@ -116,6 +116,16 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleRoleChange = async (userId, newRole) => {
+    if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+    try {
+      await userService.adminChangeRole(userId, { role: newRole });
+      loadData();
+    } catch (err) {
+      alert('Failed to update user role');
+    }
+  };
+
   const handleViewUserDetails = async (u) => {
     setSelectedUser(u);
     setShowUserDetailsModal(true);
@@ -287,14 +297,27 @@ const AdminDashboard = () => {
                     <td className="p-3 text-text-main">{u.username}</td>
                     <td className="p-3 text-text-muted">{u.email}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        u.role === 'admin' ? 'bg-red-500/20 text-red-500' :
-                        u.role === 'supervisor' ? 'bg-purple-500/20 text-purple-500' :
-                        u.role === 'organization' ? 'bg-blue-500/20 text-blue-500' :
-                        'bg-gray-500/20 text-gray-500'
-                      }`}>
-                        {u.role}
-                      </span>
+                      <div className="relative inline-block w-full max-w-[120px]">
+                        <div className={`flex items-center justify-between gap-2 px-2 py-1 rounded-full text-xs font-medium border cursor-pointer transition-colors ${
+                          u.role === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                          u.role === 'supervisor' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                          u.role === 'organization' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                          'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                        }`}>
+                          <span>{u.role}</span>
+                          <ChevronDown className="w-3 h-3 opacity-70" />
+                        </div>
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
+                        >
+                          <option value="basic_user">Basic User</option>
+                          <option value="organization">Organization</option>
+                          <option value="supervisor">Supervisor</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </div>
                     </td>
                     <td className="p-3 text-text-muted">{u.plan || 'N/A'}</td>
                     <td className="p-3">
@@ -487,8 +510,14 @@ const AdminDashboard = () => {
             <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle w-full max-w-2xl">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-text-main">
-                  Members of {selectedOrg.organization_profile?.organization_name || selectedOrg.username}
+                  Members of {selectedOrg.organization_name || selectedOrg.username}
                 </h3>
+                {selectedOrg.org_code && (
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-sm text-text-muted">Org Code:</span>
+                    <span className="text-sm font-mono font-bold text-primary">{selectedOrg.org_code}</span>
+                  </div>
+                )}
                 <button
                   onClick={() => setShowMembersModal(false)}
                   className="text-text-muted hover:text-text-main"
@@ -585,6 +614,12 @@ const AdminDashboard = () => {
                         <p className="text-sm text-text-muted">Bonus Tokens</p>
                         <p className="text-text-main font-medium">{userDetails?.bonus_tokens ?? selectedUser.bonus_tokens ?? 0}</p>
                       </div>
+                      { (userDetails?.org_code || selectedUser.org_code) && (
+                        <div>
+                          <p className="text-sm text-text-muted">Organization Code</p>
+                          <p className="text-text-main font-mono font-bold text-primary">{userDetails?.org_code || selectedUser.org_code}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 

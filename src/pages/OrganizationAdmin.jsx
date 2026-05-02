@@ -117,7 +117,7 @@ const OrganizationAdmin = () => {
             <div>
               <p className="text-text-muted text-sm">Organization Code</p>
               <div className="flex items-center gap-2">
-                <p className="text-text-main font-bold text-lg">{orgProfile?.org_code || user?.organization_profile?.org_code}</p>
+                <p className="text-text-main font-bold text-lg">{orgProfile?.org_code || user?.org_code}</p>
                 <button onClick={copyCode} className="p-1 hover:bg-bg-main rounded text-text-muted hover:text-text-main" title="Copy code">
                   <Copy className="w-4 h-4" />
                 </button>

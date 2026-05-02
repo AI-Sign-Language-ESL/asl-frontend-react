@@ -69,6 +69,7 @@ export const userService = {
   adminList: (params) => api.get('/users/admin/users/', { params }),
   adminDetail: (id) => api.get(`/users/admin/users/${id}/`),
   adminChangePlan: (userId, data) => api.post(`/users/admin/users/${userId}/change-plan/`, data),
+  adminChangeRole: (userId, data) => api.post(`/users/admin/users/${userId}/change-role/`, data),
   adminAddTokens: (userId, data) => api.post(`/users/admin/users/${userId}/add-tokens/`, data),
   adminRemoveTokens: (userId, data) => api.post(`/users/admin/users/${userId}/remove-tokens/`, data),
   adminSubscriptionStatus: (userId, data) => api.post(`/users/admin/users/${userId}/subscription-status/`, data),
