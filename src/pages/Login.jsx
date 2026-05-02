@@ -272,7 +272,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-bg-main relative overflow-hidden">
+    <>
+      <div className="min-h-screen w-full flex items-center justify-center p-6 bg-bg-main relative overflow-hidden">
       <div className="absolute inset-0 opacity-5 pointer-events-none"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
@@ -600,8 +601,8 @@ const Login = () => {
 
                   <div className="mt-8 text-center text-sm text-text-muted">
                     {isLogin ? "Don't have an account? " : "Already have an account? "}
-                    <button 
-                      onClick={() => { 
+                    <button
+                      onClick={() => {
                         console.log("Sign up button clicked. isLogin:", isLogin);
                         if (isLogin) {
                           console.log("Showing User Type Modal");
@@ -609,9 +610,9 @@ const Login = () => {
                         } else {
                           setIsLogin(true);
                         }
-                        setError(''); 
-                      }} 
-                      className="text-text-main font-semibold hover:text-primary transition-colors" 
+                        setError('');
+                      }}
+                      className="text-text-main font-semibold hover:text-primary transition-colors"
                       disabled={loading || googleLoading}
                     >
                       {isLogin ? 'Sign up' : 'Sign in'}
@@ -770,53 +771,54 @@ const Login = () => {
       </div>
     </div>
 
-    {/* Org Payment Required Modal */}
-    <AnimatePresence>
-      {showOrgPaymentModal && (
+    {/* Org Payment Required Modal */ }
+  <AnimatePresence>
+    {showOrgPaymentModal && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        onClick={() => setShowOrgPaymentModal(false)}
+      >
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowOrgPaymentModal(false)}
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-bg-card border border-border-subtle rounded-2xl p-8 max-w-md w-full mx-4"
+          onClick={(e) => e.stopPropagation()}
         >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-bg-card border border-border-subtle rounded-2xl p-8 max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Activity className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold text-text-main mb-2">Premium Plan Required</h3>
-              <p className="text-text-muted mb-6">
-                You must subscribe to the <span className="text-primary font-semibold">Premium Plan</span> to activate your organization account.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowOrgPaymentModal(false)}
-                  className="flex-1 py-3 px-4 border border-border-subtle rounded-xl text-text-muted hover:text-text-main transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    setShowOrgPaymentModal(false);
-                    navigate('/payment?plan=premium&email=' + pendingOrgEmail);
-                  }}
-                  className="flex-1 py-3 px-4 bg-primary hover:bg-secondary text-white rounded-xl font-semibold transition-all"
-                >
-                  Go to Payment
-                </button>
-              </div>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-primary" />
             </div>
-          </motion.div>
+            <h3 className="text-xl font-bold text-text-main mb-2">Premium Plan Required</h3>
+            <p className="text-text-muted mb-6">
+              You must subscribe to the <span className="text-primary font-semibold">Premium Plan</span> to activate your organization account.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowOrgPaymentModal(false)}
+                className="flex-1 py-3 px-4 border border-border-subtle rounded-xl text-text-muted hover:text-text-main transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowOrgPaymentModal(false);
+                  navigate('/payment?plan=premium&email=' + pendingOrgEmail);
+                }}
+                className="flex-1 py-3 px-4 bg-primary hover:bg-secondary text-white rounded-xl font-semibold transition-all"
+              >
+                Go to Payment
+              </button>
+            </div>
+          </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    )}
+  </AnimatePresence>
+    </>
   );
 };
 
