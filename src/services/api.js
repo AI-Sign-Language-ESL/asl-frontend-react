@@ -24,9 +24,9 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       const url = err.config?.url || '';
       const isAuthEndpoint = url.includes('/authentication/login') ||
-                           url.includes('/authentication/login/2fa') ||
-                           url.includes('/authentication/login/google') ||
-                           url.includes('/users/register');
+        url.includes('/authentication/login/2fa') ||
+        url.includes('/authentication/login/google') ||
+        url.includes('/users/register');
 
       if (!isAuthEndpoint) {
         localStorage.removeItem('token');
@@ -65,7 +65,7 @@ export const userService = {
   registerBasic: (data) => api.post('/users/register/basic/', data),
   registerOrg: (data) => api.post('/users/register/organization/', data),
 
-   // Admin
+  // Admin
   adminList: (params) => api.get('/users/admin/users/', { params }),
   adminDetail: (id) => api.get(`/users/admin/users/${id}/`),
   adminChangePlan: (userId, data) => api.post(`/users/admin/users/${userId}/change-plan/`, data),
@@ -226,6 +226,16 @@ export const meetingWsService = {
     meetingWs = null;
   },
   getState: () => meetingWs?.readyState,
+};
+
+// =========================
+// NOTIFICATIONS
+// =========================
+export const notificationService = {
+  list: () => api.get('/notifications/'),
+  markRead: (id) => api.post(`/notifications/${id}/read/`),
+  markAllRead: () => api.post('/notifications/read-all/'),
+  remove: (id) => api.delete(`/notifications/${id}/delete/`),
 };
 
 export default api;
