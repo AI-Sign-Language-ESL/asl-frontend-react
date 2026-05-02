@@ -109,6 +109,13 @@ const Login = () => {
         navigate('/home');
       }
     } catch (err) {
+      if (err.response?.data?.requires_verification) {
+        setVerificationEmail(formData.email);
+        setStep('verify');
+        // Automatically request a new code so they can verify right now
+        authService.resendCode(formData.email).catch(console.error);
+        return;
+      }
       setError(err.response?.data?.detail || 'Email or password is wrong.');
     } finally {
       setLoading(false);

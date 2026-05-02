@@ -62,6 +62,23 @@ const SupervisorDashboard = () => {
     }
   };
 
+  const getFullVideoUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://api.tafahom.io';
+    
+    let finalUrl = url;
+    // Fix missing /media/ prefix if backend MEDIA_URL is misconfigured
+    if (!finalUrl.startsWith('/media/') && finalUrl.startsWith('/dataset/')) {
+      finalUrl = `/media${finalUrl}`;
+    } else if (!finalUrl.startsWith('/')) {
+      finalUrl = `/${finalUrl}`;
+    }
+    
+    return `${baseUrl}${finalUrl}`;
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center text-text-main">Loading...</div>;
 
   return (
@@ -117,7 +134,7 @@ const SupervisorDashboard = () => {
                     </td>
                     <td className="p-3">
                       {c.video_url && (
-                        <a href={c.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                        <a href={getFullVideoUrl(c.video_url)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                           <Eye className="w-4 h-4" /> View
                         </a>
                       )}

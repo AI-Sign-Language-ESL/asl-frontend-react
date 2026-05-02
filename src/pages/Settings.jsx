@@ -338,26 +338,26 @@ const [resetLoading, setResetLoading] = useState(false);
                     </div>
                     </div>
                   </div>
-                  {/* Stats - TODO: Fetch from API */}
+                  {/* Stats */}
                   <div className="grid grid-cols-3 divide-x divide-white/10 border-t border-white/10 pt-4">
                     <div className="text-center px-2">
                       <div className="flex items-center justify-center gap-1.5 mb-1">
                         <Languages className="w-4 h-4 text-primary" />
-                        <p className="text-xl font-bold text-primary">-</p>
+                        <p className="text-xl font-bold text-primary">{user?.translations_count ?? '-'}</p>
                       </div>
                       <p className="text-xs text-text-muted">Translations</p>
                     </div>
                     <div className="text-center px-2">
                       <div className="flex items-center justify-center gap-1.5 mb-1">
                         <Users className="w-4 h-4 text-secondary" />
-                        <p className="text-xl font-bold text-secondary">-</p>
+                        <p className="text-xl font-bold text-secondary">{user?.meetings_count ?? '-'}</p>
                       </div>
                       <p className="text-xs text-text-muted">Meetings</p>
                     </div>
                     <div className="text-center px-2">
                       <div className="flex items-center justify-center gap-1.5 mb-1">
                         <Database className="w-4 h-4 text-success" />
-                        <p className="text-xl font-bold text-success">-</p>
+                        <p className="text-xl font-bold text-success">{user?.contributions_count ?? '-'}</p>
                       </div>
                       <p className="text-xs text-text-muted">Contributions</p>
                     </div>
