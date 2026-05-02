@@ -181,19 +181,36 @@ const SupervisorDashboard = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-4 bg-black flex justify-center">
-              <video 
-                src={selectedVideo} 
-                controls 
-                autoPlay 
-                className="max-h-[70vh] w-auto rounded-lg"
-                onError={(e) => {
-                  console.error("Video load error:", e);
-                  alert("Failed to load video. It may be processing or the format is unsupported.");
-                }}
-              >
-                Your browser does not support the video tag.
-              </video>
+            <div className="p-4 bg-black flex flex-col justify-center items-center min-h-[200px]">
+              {/* MOV and AVI cannot be played in browsers - show download link */}
+              {/\.(mov|avi)$/i.test(selectedVideo) ? (
+                <div className="text-center p-8">
+                  <p className="text-white text-lg font-semibold mb-2">⚠️ Format Not Playable in Browser</p>
+                  <p className="text-gray-400 text-sm mb-6">
+                    This video is in <strong className="text-yellow-400">.{selectedVideo.split('.').pop().toUpperCase()}</strong> format which browsers cannot play.<br/>
+                    Please download it to view.
+                  </p>
+                  <a
+                    href={selectedVideo}
+                    download
+                    className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-secondary transition-colors inline-block"
+                  >
+                    ⬇️ Download Video
+                  </a>
+                </div>
+              ) : (
+                <video
+                  src={selectedVideo}
+                  controls
+                  autoPlay
+                  className="max-h-[70vh] w-auto rounded-lg"
+                  onError={(e) => {
+                    console.error("Video load error:", e);
+                  }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              )}
             </div>
           </div>
         </div>
