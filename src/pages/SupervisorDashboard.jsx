@@ -10,6 +10,7 @@ const SupervisorDashboard = () => {
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('pending');
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -134,9 +135,9 @@ const SupervisorDashboard = () => {
                     </td>
                     <td className="p-3">
                       {c.video_url && (
-                        <a href={getFullVideoUrl(c.video_url)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                        <button onClick={() => setSelectedVideo(getFullVideoUrl(c.video_url))} className="text-primary hover:underline flex items-center gap-1">
                           <Eye className="w-4 h-4" /> View
-                        </a>
+                        </button>
                       )}
                     </td>
                     <td className="p-3 text-text-muted">{c.reviewer || '-'}</td>
@@ -169,6 +170,35 @@ const SupervisorDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Video Modal */}
+      {selectedVideo && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-card rounded-2xl overflow-hidden max-w-3xl w-full relative border border-border-subtle shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-border-subtle bg-bg-main">
+              <h3 className="font-bold text-text-main">Contribution Video</h3>
+              <button onClick={() => setSelectedVideo(null)} className="p-1 text-text-muted hover:text-red-500 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-4 bg-black flex justify-center">
+              <video 
+                src={selectedVideo} 
+                controls 
+                autoPlay 
+                className="max-h-[70vh] w-auto rounded-lg"
+                onError={(e) => {
+                  console.error("Video load error:", e);
+                  alert("Failed to load video. It may be processing or the format is unsupported.");
+                }}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
