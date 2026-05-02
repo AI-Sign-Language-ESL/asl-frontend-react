@@ -771,6 +771,70 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+
+        {showPendingOrgsModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle w-full max-w-4xl max-h-[80vh] flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-text-main">Pending Organizations</h3>
+                  <p className="text-sm text-text-muted">Users who verified email and are waiting for account activation/payment</p>
+                </div>
+                <button
+                  onClick={() => setShowPendingOrgsModal(false)}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-bg-main hover:bg-border-subtle transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-auto">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-bg-card z-10">
+                    <tr className="border-b border-border-subtle">
+                      <th className="text-left p-3 text-text-muted text-xs uppercase tracking-wider">Org Name</th>
+                      <th className="text-left p-3 text-text-muted text-xs uppercase tracking-wider">Admin User</th>
+                      <th className="text-left p-3 text-text-muted text-xs uppercase tracking-wider">Activity</th>
+                      <th className="text-left p-3 text-text-muted text-xs uppercase tracking-wider">Date</th>
+                      <th className="text-right p-3 text-text-muted text-xs uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingOrgs.map((org) => (
+                      <tr key={org.id} className="border-b border-border-subtle hover:bg-bg-main/30">
+                        <td className="p-3">
+                          <div className="font-bold text-text-main">{org.organization_name}</div>
+                        </td>
+                        <td className="p-3 text-text-muted">
+                          <div>{org.username}</div>
+                          <div className="text-xs">{org.email}</div>
+                        </td>
+                        <td className="p-3 text-text-muted">{org.activity_type}</td>
+                        <td className="p-3 text-text-muted text-sm">{new Date(org.created_at).toLocaleDateString()}</td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => handleApproveOrg(org.id)}
+                            disabled={approvingOrg}
+                            className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                          >
+                            Approve & Create
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {pendingOrgs.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="p-8 text-center text-text-muted">
+                          No pending organizations found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
