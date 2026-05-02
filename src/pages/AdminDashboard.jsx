@@ -30,6 +30,9 @@ const AdminDashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
   const [userTransactions, setUserTransactions] = useState([]);
   const [loadingUserDetails, setLoadingUserDetails] = useState(false);
+  const [showPendingOrgsModal, setShowPendingOrgsModal] = useState(false);
+  const [pendingOrgs, setPendingOrgs] = useState([]);
+  const [approvingOrg, setApprovingOrg] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -45,12 +48,14 @@ const AdminDashboard = () => {
 
   const loadData = async () => {
     try {
-      const [statsRes, usersRes] = await Promise.all([
+      const [statsRes, usersRes, pendingRes] = await Promise.all([
         userService.adminStats(),
         userService.adminList({ role: roleFilter, search }),
+        userService.adminPendingOrganizations(),
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
+      setPendingOrgs(pendingRes.data);
     } catch (err) {
       console.error('Failed to load admin data', err);
     } finally {
@@ -104,6 +109,20 @@ const AdminDashboard = () => {
       loadData();
     } catch (err) {
       alert('Failed to change plan');
+    }
+  };
+
+  const handleApproveOrg = async (pendingId) => {
+    if (!window.confirm('Are you sure you want to approve this organization and create their account?')) return;
+    setApprovingOrg(true);
+    try {
+      await userService.adminApproveOrganization(pendingId);
+      alert('Organization approved successfully!');
+      loadData();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to approve organization');
+    } finally {
+      setApprovingOrg(false);
     }
   };
 
@@ -208,13 +227,35 @@ const AdminDashboard = () => {
               </p>
             </div>
 
-            <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle">
-              <div className="flex items-center gap-3 mb-2">
-                <CreditCard className="w-5 h-5 text-success" />
-                <span className="text-text-muted">Active Subscriptions</span>
+            <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-500">
+                <Users className="w-6 h-6" />
               </div>
-              <p className="text-3xl font-bold text-text-main">{stats.subscriptions.active}</p>
+              {stats?.users?.pending_organizations > 0 && (
+                <button 
+                  onClick={() => setShowPendingOrgsModal(true)}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  View Pending
+                </button>
+              )}
             </div>
+            <p className="text-text-muted text-sm font-medium">Pending Orgs</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <h3 className="text-3xl font-black text-text-main">{stats?.users?.pending_organizations || 0}</h3>
+            </div>
+          </div>
+
+          <div className="bg-bg-card p-6 rounded-2xl border border-border-subtle shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center text-green-500">
+                <CreditCard className="w-6 h-6" />
+              </div>
+            </div>
+            <p className="text-text-muted text-sm font-medium">Active Subscriptions</p>
+            <h3 className="text-3xl font-black text-text-main">{stats?.subscriptions?.active || 0}</h3>
+          </div>
 
             <div 
               className="bg-bg-card p-6 rounded-2xl border border-border-subtle cursor-pointer hover:border-primary transition-colors"

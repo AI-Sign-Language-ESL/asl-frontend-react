@@ -76,6 +76,8 @@ export const userService = {
   adminPaymentTransactions: (params) => api.get('/users/admin/payment-transactions/', { params }),
   adminTransactions: (params) => api.get('/users/admin/transactions/', { params }),
   adminStats: () => api.get('/users/admin/dashboard-stats/'),
+  adminPendingOrganizations: () => api.get('/users/admin/pending-organizations/'),
+  adminApproveOrganization: (id) => api.post(`/users/admin/pending-organizations/${id}/`),
 
   // Supervisor
   supervisorContributions: (params) => api.get('/users/supervisor/contributions/', { params }),
