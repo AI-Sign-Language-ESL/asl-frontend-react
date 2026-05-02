@@ -189,7 +189,7 @@ const Login = () => {
       navigate('/home');
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid verification code.');
-      setVerificationCode(['', '', '', '', '']);
+      setVerificationCode(['', '', '', '', '', '']);
       codeInputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
