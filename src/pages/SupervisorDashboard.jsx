@@ -205,7 +205,7 @@ const SupervisorDashboard = () => {
                   autoPlay
                   className="max-h-[70vh] w-auto rounded-lg"
                   onError={(e) => {
-                    console.error("Video load error:", e);
+                    console.error("Video load error! URL attempted:", selectedVideo);
                   }}
                 >
                   Your browser does not support the video tag.
