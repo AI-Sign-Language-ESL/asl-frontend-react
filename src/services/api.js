@@ -5,9 +5,6 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.tafahom.io';
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // =========================
