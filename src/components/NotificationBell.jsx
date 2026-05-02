@@ -1,12 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bell, Check, X, Clock, Video, CreditCard,
-  Zap, Users, Calendar, Trash2, CheckCheck, Settings
+  Bell, X, Clock, Video, CreditCard,
+  Zap, Users, Calendar, CheckCheck, CheckCircle, XCircle
 } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import classNames from 'classnames';
+
+const formatRelativeTime = (isoString) => {
+  if (!isoString) return '';
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
 
 const NotificationBell = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
@@ -34,6 +46,8 @@ const NotificationBell = () => {
       case 'tokens': return <Zap className="w-4 h-4" />;
       case 'meeting_reminder': return <Calendar className="w-4 h-4" />;
       case 'participant_joined': return <Users className="w-4 h-4" />;
+      case 'contribution_approved': return <CheckCircle className="w-4 h-4" />;
+      case 'contribution_rejected': return <XCircle className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
@@ -44,6 +58,8 @@ const NotificationBell = () => {
       case 'subscription': return 'bg-yellow-500/20 text-yellow-500';
       case 'tokens': return 'bg-success/20 text-success';
       case 'meeting_reminder': return 'bg-secondary/20 text-secondary';
+      case 'contribution_approved': return 'bg-green-500/20 text-green-500';
+      case 'contribution_rejected': return 'bg-red-500/20 text-red-500';
       default: return 'bg-white/10 text-text-muted';
     }
   };
@@ -123,8 +139,8 @@ const NotificationBell = () => {
                           )}
                           onClick={() => {
                             markAsRead(notification.id);
-                            if (notification.actionUrl) {
-                              window.location.href = notification.actionUrl;
+                            if (notification.action_url) {
+                              window.location.href = notification.action_url;
                             }
                           }}
                         >
@@ -167,7 +183,7 @@ const NotificationBell = () => {
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                               <Clock className="w-3 h-3 text-text-muted" />
-                              <span className="text-[10px] text-text-muted">{notification.time}</span>
+                              <span className="text-[10px] text-text-muted">{formatRelativeTime(notification.created_at)}</span>
                             </div>
                           </div>
                         </motion.div>
