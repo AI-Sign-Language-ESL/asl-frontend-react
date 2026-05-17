@@ -2,13 +2,14 @@ import React, { useState, Suspense, useEffect, useRef } from 'react';
 import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle, Mic, MicOff, Gamepad2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { useFBX, Environment } from '@react-three/drei';
+import { useFBX, useAnimations, Environment } from '@react-three/drei';
 import { generatorService, unityService } from '../services/api';
 import ErrorBoundary from '../components/ErrorBoundary';
 import classNames from 'classnames';
 
-const AvatarModel = ({ animation }) => {
-  const fbx = useFBX(animation || '/ahln.fbx');
+const AvatarModel = ({ animation, isPlaying }) => {
+  const fbx = useFBX('/ahln.fbx');
+  const { actions, names } = useAnimations(fbx.animations, fbx);
 
   useEffect(() => {
     fbx.traverse((obj) => {
@@ -19,6 +20,31 @@ const AvatarModel = ({ animation }) => {
       }
     });
   }, [fbx]);
+
+  useEffect(() => {
+    if (!names.length) return;
+
+    Object.values(actions).forEach(action => action?.stop());
+
+    let actionToPlay = null;
+
+    if (isPlaying && animation && actions[animation]) {
+      actionToPlay = actions[animation];
+    } else if (actions['idle']) {
+      actionToPlay = actions['idle'];
+    } else if (actions['Idle']) {
+      actionToPlay = actions['Idle'];
+    } else {
+      actionToPlay = actions[names[0]];
+    }
+
+    if (actionToPlay) {
+      actionToPlay.reset().fadeIn(0.5).play();
+      return () => {
+        actionToPlay.fadeOut(0.5);
+      };
+    }
+  }, [actions, names, animation, isPlaying]);
 
   return <primitive object={fbx} scale={0.02} position={[0, -2.5, 0]} />;
 };
@@ -264,7 +290,7 @@ const Generator = () => {
               <directionalLight position={[0, 2, 5]} intensity={1} />
               <Environment preset="city" />
               <Suspense fallback={null}>
-                <AvatarModel animation={animation} />
+                <AvatarModel animation={animation} isPlaying={isPlaying} />
               </Suspense>
             </Canvas>
           </ErrorBoundary>
