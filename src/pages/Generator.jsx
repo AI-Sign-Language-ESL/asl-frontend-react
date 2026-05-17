@@ -4,10 +4,11 @@ import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { useFBX, Environment } from '@react-three/drei';
 import { generatorService, unityService } from '../services/api';
+import ErrorBoundary from '../components/ErrorBoundary';
 import classNames from 'classnames';
 
 const AvatarModel = ({ animation }) => {
-  const fbx = useFBX(animation || '/idle.fbx');
+  const fbx = useFBX(animation || '/ahln.fbx');
 
   useEffect(() => {
     fbx.traverse((obj) => {
@@ -253,14 +254,20 @@ const Generator = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
         <div className="flex-1 w-full relative">
-          <Canvas camera={{ position: [0, 1.5, 4], fov: 45 }} dpr={[1, 1.5]}>
-            <ambientLight intensity={0.7} />
-            <directionalLight position={[0, 2, 5]} intensity={1} />
-            <Environment preset="city" />
-            <Suspense fallback={null}>
-              <AvatarModel animation={animation} />
-            </Suspense>
-          </Canvas>
+          <ErrorBoundary fallback={
+            <div className="flex items-center justify-center h-full text-text-muted text-sm">
+              3D view unavailable
+            </div>
+          }>
+            <Canvas camera={{ position: [0, 1.5, 4], fov: 45 }} dpr={[1, 1.5]}>
+              <ambientLight intensity={0.7} />
+              <directionalLight position={[0, 2, 5]} intensity={1} />
+              <Environment preset="city" />
+              <Suspense fallback={null}>
+                <AvatarModel animation={animation} />
+              </Suspense>
+            </Canvas>
+          </ErrorBoundary>
 
           {/* Controls Overlay */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-bg-card/80 backdrop-blur-md px-6 py-3 rounded-full border border-border-subtle shadow-2xl">
