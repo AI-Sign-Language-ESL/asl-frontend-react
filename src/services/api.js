@@ -116,6 +116,10 @@ export const generatorService = {
   generate: (text) => api.post('/translation/to-sign/', { text }),
 };
 
+export const unityService = {
+  generateSign: (text) => api.post('/translation/unity-sign/', { text }),
+};
+
 export const youtubeService = {
   translate: (youtubeUrl) => api.post('/translation/youtube-translate/', { youtube_url: youtubeUrl }),
 };

@@ -1,9 +1,9 @@
 import React, { useState, Suspense, useEffect, useRef } from 'react';
-import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
+import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle, Mic, MicOff, Gamepad2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { useFBX, Environment } from '@react-three/drei';
-import { generatorService } from '../services/api';
+import { generatorService, unityService } from '../services/api';
 import classNames from 'classnames';
 
 const AvatarModel = ({ animation }) => {
@@ -28,6 +28,8 @@ const Generator = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [animation, setAnimation] = useState(null);
+  const [unityAnimations, setUnityAnimations] = useState([]);
+  const [unitySource, setUnitySource] = useState('');
 
   // Speech-to-text states
   const [speechListening, setSpeechListening] = useState(false);
@@ -48,6 +50,28 @@ const Generator = () => {
       setIsPlaying(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Generation failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnityGenerate = async () => {
+    if (!inputText.trim()) return;
+    setLoading(true);
+    setError('');
+    setUnityAnimations([]);
+    setUnitySource('');
+    try {
+      const response = await unityService.generateSign(inputText);
+      const data = response.data;
+      setUnityAnimations(data.animations || []);
+      setUnitySource(data.source || '');
+      if (data.animations?.length) {
+        setAnimation(data.animations[data.animations.length - 1]);
+      }
+      setIsPlaying(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unity generation failed');
     } finally {
       setLoading(false);
     }
@@ -183,7 +207,46 @@ const Generator = () => {
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           <span>Generate</span>
         </button>
+        <button
+          onClick={handleUnityGenerate}
+          disabled={loading || !inputText.trim()}
+          title="Send to Unity sign matcher"
+          className={classNames(
+            "p-3 rounded-full transition-colors",
+            unityAnimations.length
+              ? "bg-green-500/20 text-green-500"
+              : "bg-bg-card hover:bg-bg-card/80 text-text-muted hover:text-primary"
+          )}
+        >
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gamepad2 className="w-5 h-5" />}
+        </button>
       </div>
+
+      {/* Unity Animation Results */}
+      {unityAnimations.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass p-4 rounded-2xl border border-border-subtle"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-text-muted uppercase tracking-wider font-medium">
+              Unity Animations {unitySource && `(${unitySource})`}
+            </span>
+            <span className="text-xs text-text-muted">{unityAnimations.length} clips</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {unityAnimations.map((name, i) => (
+              <span
+                key={i}
+                className="px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary font-medium"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* 3D Canvas Area */}
       <div className="flex-1 glass rounded-3xl border border-border-subtle relative overflow-hidden flex flex-col">
