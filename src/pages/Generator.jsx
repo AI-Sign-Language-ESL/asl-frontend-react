@@ -54,26 +54,14 @@ const Generator = () => {
       );
 
       // =====================================
-      // CHECK UNITY
+      // CHECK UNITY & SYNC
       // =====================================
 
       const unityWindow =
         unityIframeRef.current?.contentWindow;
 
-      if (!unityWindow) {
-        console.log(
-          "UNITY WINDOW NOT FOUND"
-        );
-
-        return;
-      }
-
-      if (!unityWindow.unityInstance) {
-        console.log(
-          "UNITY INSTANCE NOT READY"
-        );
-
-        return;
+      if (unityWindow && unityWindow.unityInstance) {
+        window.unityInstance = unityWindow.unityInstance;
       }
 
       // =====================================
@@ -87,21 +75,27 @@ const Generator = () => {
         setUnityAnimations(data.animations);
         setUnitySource(data.source || 'django');
 
-        data.animations.forEach((anim) => {
+        if (window.unityInstance)
+        {
+            console.log(
+                "SENDING TO UNITY:",
+                data.animations
+            );
 
-          console.log(
-            "SENDING:",
-            anim
-          );
-
-          unityWindow.unityInstance.SendMessage(
-            "tpose",
-            "PlayAnimation",
-            anim
-          );
-
-        });
-
+            window.unityInstance.SendMessage(
+                "tpose",
+                "ReceiveAnimations",
+                JSON.stringify(
+                    data.animations
+                )
+            );
+        }
+        else
+        {
+            console.error(
+                "UNITY INSTANCE NOT READY"
+            );
+        }
       }
 
     } catch (err) {
