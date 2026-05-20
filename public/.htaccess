@@ -1,6 +1,44 @@
-RewriteEngine On
-RewriteBase /
-RewriteRule ^index\.html$ - [L]
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # 1. SPA React Routing (Bypass Unity Assets)
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} !\.(wasm|js|css|data|unityweb|json|png|jpg|jpeg|gif|ico|svg)$ [NC]
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# 2. Tell Hostinger these are pre-gzipped files
+<IfModule mod_mime.c>
+  AddEncoding gzip .gz
+  AddType application/wasm         .wasm
+  AddType application/wasm         .wasm.gz
+  AddType application/javascript   .js.gz
+  AddType application/octet-stream .data.gz
+</IfModule>
+
+# 3. Prevent Hostinger from double-compressing the files
+<IfModule mod_deflate.c>
+  SetEnvIfNoCase Request_URI \.gz$ no-gzip dont-vary
+</IfModule>
+
+# 4. Fix Wasm Streaming Abort Bug in Chrome/Safari
+<IfModule mod_headers.c>
+  <FilesMatch "\.wasm\.gz$">
+    Header set Content-Type "application/wasm"
+    Header set Content-Encoding "gzip"
+    Header unset Content-Length
+  </FilesMatch>
+  <FilesMatch "\.framework\.js\.gz$">
+    Header set Content-Type "application/javascript"
+    Header set Content-Encoding "gzip"
+    Header unset Content-Length
+  </FilesMatch>
+  <FilesMatch "\.data\.gz$">
+    Header set Content-Type "application/octet-stream"
+    Header set Content-Encoding "gzip"
+    Header unset Content-Length
+  </FilesMatch>
+</IfModule>

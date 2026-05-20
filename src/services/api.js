@@ -113,11 +113,33 @@ export const translatorService = {
 };
 
 export const generatorService = {
-  generate: (text) => api.post('/translation/to-sign/', { text }),
+  generate: (text) =>
+    axios.post(
+      "https://api.tafahom.io/api/v1/translation/to-sign/",
+      {
+        text: text,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    ),
 };
 
 export const unityService = {
-  generateSign: (text) => api.post('/translation/unity-sign/', { text }),
+  generateSign: (text) =>
+    axios.post(
+      "https://api.tafahom.io/api/v1/translation/unity-sign/",
+      {
+        text: text,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    ),
 };
 
 export const youtubeService = {

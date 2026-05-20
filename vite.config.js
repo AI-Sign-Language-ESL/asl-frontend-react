@@ -12,10 +12,69 @@ if (!fs.existsSync(certDir)) {
 const keyPath = path.join(certDir, 'key.pem')
 const certPath = path.join(certDir, 'cert.pem')
 
+function unityDevServerPlugin() {
+  return {
+    name: 'unity-dev-server',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        // Strip query params just in case
+        const pathname = req.url.split('?')[0]
+        if (pathname.match(/\.(wasm|js|data)\.gz$/) || pathname.endsWith('.wasm')) {
+          let contentType = 'application/octet-stream'
+          if (pathname.includes('.wasm')) contentType = 'application/wasm'
+          else if (pathname.includes('.js')) contentType = 'application/javascript'
+          
+          res.setHeader('Content-Type', contentType)
+          
+          if (pathname.endsWith('.gz')) {
+            res.setHeader('Content-Encoding', 'gzip')
+          }
+          
+          const filePath = path.join(process.cwd(), 'public', pathname)
+          if (fs.existsSync(filePath)) {
+            const stat = fs.statSync(filePath)
+            res.setHeader('Content-Length', stat.size)
+            res.writeHead(200)
+            fs.createReadStream(filePath).pipe(res)
+            return
+          }
+        }
+        next()
+      })
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const pathname = req.url.split('?')[0]
+        if (pathname.match(/\.(wasm|js|data)\.gz$/) || pathname.endsWith('.wasm')) {
+          let contentType = 'application/octet-stream'
+          if (pathname.includes('.wasm')) contentType = 'application/wasm'
+          else if (pathname.includes('.js')) contentType = 'application/javascript'
+          
+          res.setHeader('Content-Type', contentType)
+          
+          if (pathname.endsWith('.gz')) {
+            res.setHeader('Content-Encoding', 'gzip')
+          }
+          
+          const filePath = path.join(process.cwd(), 'dist', pathname)
+          if (fs.existsSync(filePath)) {
+            const stat = fs.statSync(filePath)
+            res.setHeader('Content-Length', stat.size)
+            res.writeHead(200)
+            fs.createReadStream(filePath).pipe(res)
+            return
+          }
+        }
+        next()
+      })
+    }
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), unityDevServerPlugin()],
   server: {
     port: 5180,
     host: true,

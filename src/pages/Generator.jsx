@@ -1,60 +1,14 @@
-import React, { useState, Suspense, useEffect, useRef } from 'react';
-import { Send, Play, Pause, RotateCcw, Loader2, AlertCircle, Mic, MicOff, Gamepad2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, Loader2, AlertCircle, Mic, MicOff, Gamepad2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Canvas } from '@react-three/fiber';
-import { useFBX, useAnimations, Environment } from '@react-three/drei';
-import { generatorService, unityService } from '../services/api';
+import { unityService } from '../services/api';
 import ErrorBoundary from '../components/ErrorBoundary';
 import classNames from 'classnames';
 
-const AvatarModel = ({ animation, isPlaying }) => {
-  const fbx = useFBX('/ahln.fbx');
-  const { actions, names } = useAnimations(fbx.animations, fbx);
-
-  useEffect(() => {
-    fbx.traverse((obj) => {
-      const name = obj.name.toLowerCase();
-      if (name.includes('arm') && !name.includes('fore')) {
-        if (name.includes('left')) obj.rotation.z = 1;
-        if (name.includes('right')) obj.rotation.z = -1;
-      }
-    });
-  }, [fbx]);
-
-  useEffect(() => {
-    if (!names.length) return;
-
-    Object.values(actions).forEach(action => action?.stop());
-
-    let actionToPlay = null;
-
-    if (isPlaying && animation && actions[animation]) {
-      actionToPlay = actions[animation];
-    } else if (actions['idle']) {
-      actionToPlay = actions['idle'];
-    } else if (actions['Idle']) {
-      actionToPlay = actions['Idle'];
-    } else {
-      actionToPlay = actions[names[0]];
-    }
-
-    if (actionToPlay) {
-      actionToPlay.reset().fadeIn(0.5).play();
-      return () => {
-        actionToPlay.fadeOut(0.5);
-      };
-    }
-  }, [actions, names, animation, isPlaying]);
-
-  return <primitive object={fbx} scale={0.02} position={[0, -2.5, 0]} />;
-};
-
 const Generator = () => {
   const [inputText, setInputText] = useState("");
-  const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [animation, setAnimation] = useState(null);
   const [unityAnimations, setUnityAnimations] = useState([]);
   const [unitySource, setUnitySource] = useState('');
 
@@ -63,24 +17,8 @@ const Generator = () => {
   const speechRecognitionRef = useRef(null);
   const speechTranscriptRef = useRef("");
   const speechRestartTimeoutRef = useRef(null);
+  const unityIframeRef = useRef(null);
   const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-
-  const handleGenerate = async () => {
-    if (!inputText.trim()) return;
-    setLoading(true);
-    setError('');
-    try {
-      const response = await generatorService.generate(inputText);
-      if (response.data.animationUrl) {
-        setAnimation(response.data.animationUrl);
-      }
-      setIsPlaying(true);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Generation failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleUnityGenerate = async () => {
     if (!inputText.trim()) return;
@@ -88,17 +26,92 @@ const Generator = () => {
     setError('');
     setUnityAnimations([]);
     setUnitySource('');
+
     try {
-      const response = await unityService.generateSign(inputText);
-      const data = response.data;
-      setUnityAnimations(data.animations || []);
-      setUnitySource(data.source || '');
-      if (data.animations?.length) {
-        setAnimation(data.animations[data.animations.length - 1]);
+
+      // =====================================
+      // CALL DJANGO
+      // =====================================
+
+      const response = await fetch(
+        "https://api.tafahom.io/api/v1/translation/unity-sign/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: inputText,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log(
+        "DJANGO RESPONSE:",
+        data
+      );
+
+      // =====================================
+      // CHECK UNITY
+      // =====================================
+
+      const unityWindow =
+        unityIframeRef.current?.contentWindow;
+
+      if (!unityWindow) {
+        console.log(
+          "UNITY WINDOW NOT FOUND"
+        );
+
+        return;
       }
-      setIsPlaying(true);
+
+      if (!unityWindow.unityInstance) {
+        console.log(
+          "UNITY INSTANCE NOT READY"
+        );
+
+        return;
+      }
+
+      // =====================================
+      // SEND ANIMATIONS TO UNITY
+      // =====================================
+
+      if (
+        data.animations &&
+        data.animations.length > 0
+      ) {
+        setUnityAnimations(data.animations);
+        setUnitySource(data.source || 'django');
+
+        data.animations.forEach((anim) => {
+
+          console.log(
+            "SENDING:",
+            anim
+          );
+
+          unityWindow.unityInstance.SendMessage(
+            "tpose",
+            "PlayAnimation",
+            anim
+          );
+
+        });
+
+      }
+
     } catch (err) {
-      setError(err.response?.data?.message || 'Unity generation failed');
+
+      console.error(
+        "UNITY GENERATE ERROR:",
+        err
+      );
+      setError(err.message || 'Unity generation failed');
+
     } finally {
       setLoading(false);
     }
@@ -221,13 +234,13 @@ const Generator = () => {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+          onKeyDown={(e) => e.key === 'Enter' && handleUnityGenerate()}
           placeholder={speechListening ? "Listening..." : "Enter text to translate into sign language..."}
           disabled={loading}
           className="flex-1 bg-transparent outline-none text-text-main placeholder:text-text-muted/50 text-lg disabled:opacity-50"
         />
         <button
-          onClick={handleGenerate}
+          onClick={handleUnityGenerate}
           disabled={loading || !inputText.trim()}
           className="px-6 py-3 bg-primary hover:bg-secondary text-white rounded-full font-medium transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -279,35 +292,16 @@ const Generator = () => {
       <div className="flex-1 glass rounded-3xl border border-border-subtle relative overflow-hidden flex flex-col">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
-        <div className="flex-1 w-full relative">
-          <ErrorBoundary fallback={
-            <div className="flex items-center justify-center h-full text-text-muted text-sm">
-              3D view unavailable
-            </div>
-          }>
-            <Canvas camera={{ position: [0, 1.5, 4], fov: 45 }} dpr={[1, 1.5]}>
-              <ambientLight intensity={0.7} />
-              <directionalLight position={[0, 2, 5]} intensity={1} />
-              <Environment preset="city" />
-              <Suspense fallback={null}>
-                <AvatarModel animation={animation} isPlaying={isPlaying} />
-              </Suspense>
-            </Canvas>
-          </ErrorBoundary>
+        <div className="flex-1 w-full relative" style={{ minHeight: '500px' }}>
+          <iframe
+            ref={unityIframeRef}
+            src="/unity/index.html"
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+            title="Unity Avatar"
+            allow="autoplay; fullscreen"
+          />
 
-          {/* Controls Overlay */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-bg-card/80 backdrop-blur-md px-6 py-3 rounded-full border border-border-subtle shadow-2xl">
-            <button className="p-2 hover:bg-bg-card rounded-full transition-colors text-text-main" onClick={() => setAnimation(null)}>
-              <RotateCcw className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              disabled={!animation}
-              className="w-12 h-12 bg-primary hover:bg-secondary rounded-full flex items-center justify-center transition-colors shadow-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
-            </button>
-          </div>
+
         </div>
       </div>
 
