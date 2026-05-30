@@ -10,6 +10,20 @@ const api = axios.create({
 // =========================
 // INTERCEPTORS
 // =========================
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -20,18 +34,73 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      const url = err.config?.url || '';
+  async (err) => {
+    const originalRequest = err.config;
+
+    // Fast fail for rate limiting, UI will handle 429
+    if (err.response?.status === 429) {
+      return Promise.reject(err);
+    }
+
+    if (err.response?.status === 401 && !originalRequest._retry) {
+      const url = originalRequest.url || '';
       const isAuthEndpoint = url.includes('/authentication/login') ||
         url.includes('/authentication/login/2fa') ||
         url.includes('/authentication/login/google') ||
-        url.includes('/users/register');
+        url.includes('/users/register') ||
+        url.includes('/authentication/token/refresh');
 
       if (!isAuthEndpoint) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then(token => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return api(originalRequest);
+            })
+            .catch(err => Promise.reject(err));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const refreshToken = localStorage.getItem('refresh');
+        if (!refreshToken) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return Promise.reject(err);
+        }
+
+        return new Promise((resolve, reject) => {
+          axios.post(`${API_URL}/api/v1/authentication/token/refresh/`, { refresh: refreshToken })
+            .then(({ data }) => {
+              if (data.access) {
+                localStorage.setItem('token', data.access);
+                if (data.refresh) {
+                  localStorage.setItem('refresh', data.refresh); // Rotation
+                }
+                api.defaults.headers.common['Authorization'] = `Bearer ${data.access}`;
+                originalRequest.headers.Authorization = `Bearer ${data.access}`;
+                processQueue(null, data.access);
+                resolve(api(originalRequest));
+              } else {
+                throw new Error("Invalid token refresh response");
+              }
+            })
+            .catch((refreshErr) => {
+              processQueue(refreshErr, null);
+              localStorage.removeItem('token');
+              localStorage.removeItem('refresh');
+              localStorage.removeItem('user');
+              window.location.href = '/login';
+              reject(refreshErr);
+            })
+            .finally(() => {
+              isRefreshing = false;
+            });
+        });
       }
     }
     return Promise.reject(err);
@@ -161,7 +230,7 @@ export const meetingService = {
 // DATASET
 // =========================
 export const datasetService = {
-  contribute: (formData) => api.post('/dataset/contributions/', formData),
+  contribute: (formData, config) => api.post('/dataset/contributions/', formData, config),
   myContributions: () => api.get('/dataset/contributions/me/'),
   pending: () => api.get('/dataset/admin/contributions/pending/'),
   approve: (id) => api.post(`/dataset/admin/contributions/${id}/approve/`),

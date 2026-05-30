@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout';
 import ParticlesBackground from './components/ParticlesBackground';
@@ -186,6 +187,7 @@ const AnimatedRoutes = () => {
 export default function App() {
   return (
     <Router>
+      <Toaster position="top-right" />
       <ParticlesBackground />
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.05] -z-10"

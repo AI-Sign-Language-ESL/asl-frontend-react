@@ -5,6 +5,7 @@ import classNames from 'classnames';
 import { Link } from 'react-router-dom';
 import { datasetService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { handleApiError } from '../utils/errorHandler';
 
 const Dataset = () => {
   const { isAuthenticated } = useAuth();
@@ -14,6 +15,7 @@ const Dataset = () => {
   const [file, setFile] = useState(null);
   const [label, setLabel] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const steps = [
     { id: 1, title: "Record / Upload", icon: <Video className="w-5 h-5" /> },
@@ -75,30 +77,20 @@ const Dataset = () => {
       formData.append('video', file);
       formData.append('word', label);
 
-      await datasetService.contribute(formData);
+      await datasetService.contribute(formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setProgress(percentCompleted);
+          }
+        }
+      });
       setStep(3);
     } catch (err) {
-      console.error('Full upload error object:', err);
-      let errorMsg = 'Upload failed. Please try again.';
-      
-      if (err.response) {
-        console.error('Error response data:', err.response.data);
-        const data = err.response.data;
-        if (typeof data === 'string') {
-          errorMsg = data;
-        } else if (data && typeof data === 'object') {
-          // Try to extract the most descriptive error
-          const firstVal = Object.values(data).flat()[0];
-          errorMsg = data.message || data.detail || data.error || (typeof firstVal === 'string' ? firstVal : JSON.stringify(data));
-        }
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      
-      // Ensure we have a clean string for the UI
-      setError(String(errorMsg).substring(0, 255));
+      setError(handleApiError(err, 'Upload failed. Please try again.'));
     } finally {
       setSubmitting(false);
+      setProgress(0);
     }
   };
 
@@ -255,10 +247,18 @@ const Dataset = () => {
             <button
               onClick={handleSubmitDataset}
               disabled={submitting}
-              className="px-8 py-3 rounded-full bg-success hover:bg-success/80 text-white transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] font-medium flex items-center gap-2 disabled:opacity-50"
+              className="px-8 py-3 rounded-full bg-success hover:bg-success/80 text-white transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] font-medium flex items-center gap-2 disabled:opacity-50 relative overflow-hidden"
             >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submit
+              {submitting && (
+                <div 
+                  className="absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-300"
+                  style={{ width: `${progress}%` }} 
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {submitting ? `Uploading... ${progress}%` : 'Submit'}
+              </span>
             </button>
           )}
           {step < 2 && (

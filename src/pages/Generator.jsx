@@ -16,7 +16,6 @@ const Generator = () => {
   const [speechListening, setSpeechListening] = useState(false);
   const speechRecognitionRef = useRef(null);
   const speechTranscriptRef = useRef("");
-  const speechRestartTimeoutRef = useRef(null);
   const unityIframeRef = useRef(null);
   const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -112,87 +111,80 @@ const Generator = () => {
   };
 
   // Speech-to-text functions
-  const isArabic = (text) => /[\u0600-\u06FF]/.test(text);
-
-  const createRecognition = (lang) => {
-    if (!SpeechRecognition) return null;
-    const recognition = new SpeechRecognition();
-    recognition.lang = lang;
-    recognition.interimResults = true;
-    recognition.continuous = true;
-
-    recognition.onresult = (event) => {
-      let interimTranscript = "";
-      let finalTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        } else {
-          interimTranscript += transcript;
-        }
-      }
-
-      if (finalTranscript) {
-        speechTranscriptRef.current += finalTranscript;
-      }
-
-      const fullText = speechTranscriptRef.current + interimTranscript;
-      setInputText(fullText);
-
-      if (finalTranscript) {
-        const newLang = isArabic(finalTranscript) ? "ar-EG" : "en-US";
-        if (recognition.lang !== newLang) {
-          clearTimeout(speechRestartTimeoutRef.current);
-          speechRestartTimeoutRef.current = setTimeout(() => restartSpeechRecognition(newLang), 500);
-        }
-      }
-    };
-
-    recognition.onerror = (e) => {
-      if (e.error === "not-allowed") setSpeechListening(false);
-    };
-
-    return recognition;
-  };
-
-  const startSpeechListening = () => {
-    if (!SpeechRecognition) return;
-    speechTranscriptRef.current = "";
-    setInputText("");
-    const rec = createRecognition("en-US");
-    if (rec) {
-      rec.start();
-      speechRecognitionRef.current = rec;
-      setSpeechListening(true);
+  const toggleSpeechRecognition = () => {
+    if (!SpeechRecognition) {
+      setError("Speech recognition is not supported in your browser. Please try using Chrome or Edge.");
+      return;
     }
-  };
 
-  const stopSpeechListening = () => {
-    speechRecognitionRef.current?.stop();
-    speechRecognitionRef.current = null;
-    clearTimeout(speechRestartTimeoutRef.current);
-    setSpeechListening(false);
-    speechTranscriptRef.current = inputText;
-  };
-
-  const restartSpeechRecognition = (lang) => {
-    if (!speechListening) return;
-    speechRecognitionRef.current?.stop();
-    setTimeout(() => {
-      const rec = createRecognition(lang);
-      if (rec) {
-        rec.start();
-        speechRecognitionRef.current = rec;
+    if (speechListening) {
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.stop();
       }
-    }, 300);
+      setSpeechListening(false);
+      return;
+    }
+
+    setError('');
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ar-EG';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      const initialText = inputText.trim() ? inputText.trim() + " " : "";
+      speechTranscriptRef.current = initialText;
+
+      recognition.onstart = () => {
+        setSpeechListening(true);
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          speechTranscriptRef.current += finalTranscript + " ";
+        }
+
+        setInputText(speechTranscriptRef.current + interimTranscript);
+      };
+
+      recognition.onerror = (event) => {
+        setSpeechListening(false);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          setError('Microphone access was denied. Please allow microphone permissions.');
+        } else if (event.error !== 'no-speech') {
+          setError(`Speech recognition failed: ${event.error}`);
+        }
+      };
+
+      recognition.onend = () => {
+        setSpeechListening(false);
+      };
+
+      speechRecognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error(err);
+      setError('Could not start speech recognition.');
+      setSpeechListening(false);
+    }
   };
 
   useEffect(() => {
     return () => {
-      speechRecognitionRef.current?.stop();
-      clearTimeout(speechRestartTimeoutRef.current);
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.stop();
+      }
     };
   }, []);
 
@@ -212,18 +204,23 @@ const Generator = () => {
 
       {/* Input Area */}
       <div className="glass p-4 rounded-3xl flex gap-3 border border-border-subtle items-center drop-shadow-xl relative z-10">
-        {SpeechRecognition && (
-          <button
-            onClick={speechListening ? stopSpeechListening : startSpeechListening}
-            className={classNames(
-              "p-3 rounded-full transition-colors group",
-              speechListening ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" : "bg-bg-card hover:bg-bg-card/80 text-text-main"
-            )}
-            title={speechListening ? "Stop speech recognition" : "Start speech recognition"}
-          >
-            {speechListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />}
-          </button>
-        )}
+        <button
+          onClick={toggleSpeechRecognition}
+          className={classNames(
+            "p-3 rounded-full transition-colors group relative",
+            speechListening ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" : "bg-bg-card hover:bg-bg-card/80 text-text-main"
+          )}
+          title={speechListening ? "Stop speech recognition" : "Start speech recognition"}
+        >
+          {speechListening ? (
+            <>
+              <MicOff className="w-5 h-5 relative z-10" />
+              <span className="absolute inset-0 rounded-full animate-ping bg-red-500/40"></span>
+            </>
+          ) : (
+            <Mic className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />
+          )}
+        </button>
         <input
           type="text"
           value={inputText}

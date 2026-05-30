@@ -5,14 +5,16 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Check, ArrowLeft, Activit
 import classNames from 'classnames';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/api';
+import GoogleLoginButton from '../components/GoogleLoginButton';
+import { handleApiError } from '../utils/errorHandler';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, register, verifyEmail, loginGoogle } = useAuth();
+  const { login, register, verifyEmail } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState('form'); // form, verify, 2fa
   const [verificationEmail, setVerificationEmail] = useState('');
@@ -71,29 +73,9 @@ const Login = () => {
       await register(registerData, userType);
       setVerificationEmail(formData.email);
       setStep('verify');
+      toast.success('Registration successful. Please verify your email.');
     } catch (err) {
-      const errorData = err.response?.data;
-      let errorMessage = 'Registration failed. Please try again.';
-      if (errorData) {
-        if (typeof errorData === 'object' && !errorData.message) {
-          const errors = [];
-          for (const [field, messages] of Object.entries(errorData)) {
-            if (Array.isArray(messages)) {
-              errors.push(...messages);
-            } else if (typeof messages === 'string') {
-              errors.push(messages);
-            }
-          }
-          if (errors.length > 0) {
-            errorMessage = errors.join(' ');
-          }
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (errorData.detail) {
-          errorMessage = errorData.detail;
-        }
-      }
-      setError(errorMessage);
+      setError(handleApiError(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -110,6 +92,7 @@ const Login = () => {
         setTwoFaUserId(data.user_id);
         setStep('2fa');
         setVerificationCode(['', '', '', '', '', '']);
+        toast.success('Please enter your 2FA code.');
       } else {
         navigate('/home');
       }
@@ -121,7 +104,7 @@ const Login = () => {
         authService.resendCode(formData.email).catch(console.error);
         return;
       }
-      setError(err.response?.data?.detail || 'Email or password is wrong.');
+      setError(handleApiError(err, 'Email or password is wrong.'));
     } finally {
       setLoading(false);
     }
@@ -168,7 +151,7 @@ const Login = () => {
         navigate('/home');
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid 2FA code.');
+      setError(handleApiError(err, 'Invalid 2FA code.'));
       setVerificationCode(['', '', '', '', '', '']);
       codeInputRefs.current[0]?.focus();
     } finally {
@@ -188,7 +171,7 @@ const Login = () => {
       }
       navigate('/home');
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid verification code.');
+      setError(handleApiError(err, 'Invalid verification code.'));
       setVerificationCode(['', '', '', '', '', '']);
       codeInputRefs.current[0]?.focus();
     } finally {
@@ -202,8 +185,9 @@ const Login = () => {
     try {
       await authService.resendCode(verificationEmail);
       setError('');
+      toast.success('Code resent successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend code.');
+      setError(handleApiError(err, 'Failed to resend code.'));
     } finally {
       setLoading(false);
     }
@@ -214,35 +198,10 @@ const Login = () => {
     setError('');
   };
 
-  // Google Sign-In for basic users only
-  const handleGoogleSignIn = () => {
-    setGoogleLoading(true);
-    setError('');
-    // Redirect to backend Google OAuth endpoint
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.tafahom.io';
-    window.location.href = `${apiUrl}/api/v1/authentication/login/google/`;
-  };
-
   useEffect(() => {
-    // Handle Google OAuth callback
+    // Legacy: handle Google OAuth redirect callback from backend
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
     const error = urlParams.get('error');
-
-    if (token) {
-      setGoogleLoading(true);
-      loginGoogle({ token })
-        .then(() => {
-          window.history.replaceState({}, document.title, window.location.pathname);
-          navigate('/home');
-        })
-        .catch((err) => {
-          setError(err.response?.data?.detail || 'Google sign-in failed');
-        })
-        .finally(() => {
-          setGoogleLoading(false);
-        });
-    }
 
     if (error) {
       setError('Google sign-in was cancelled or failed');
@@ -578,20 +537,7 @@ const Login = () => {
                         <div className="flex-1 h-px bg-border-subtle" />
                       </div>
 
-                      <button
-                        onClick={handleGoogleSignIn}
-                        disabled={googleLoading}
-                        className="w-full bg-white hover:bg-gray-50 text-gray-900 rounded-xl py-3.5 font-bold transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300"
-                      >
-                        {googleLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Activity className="w-5 h-5" />
-                            Continue with Google
-                          </>
-                        )}
-                      </button>
+                      <GoogleLoginButton />
 
                       <p className="mt-3 text-center text-xs text-text-muted">
                         Basic users only
@@ -613,7 +559,7 @@ const Login = () => {
                         setError('');
                       }}
                       className="text-text-main font-semibold hover:text-primary transition-colors"
-                      disabled={loading || googleLoading}
+                      disabled={loading}
                     >
                       {isLogin ? 'Sign up' : 'Sign in'}
                     </button>

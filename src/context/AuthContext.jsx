@@ -58,6 +58,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', data.token);
     }
 
+    if (data.refresh) {
+      localStorage.setItem('refresh', data.refresh);
+    }
+
     if (data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
@@ -78,6 +82,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', data.access);
     } else if (data.token) {
       localStorage.setItem('token', data.token);
+    }
+
+    if (data.refresh) {
+      localStorage.setItem('refresh', data.refresh);
     }
 
     if (data.user) {
@@ -109,6 +117,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', data.token);
     }
 
+    if (data.refresh) {
+      localStorage.setItem('refresh', data.refresh);
+    }
+
     if (data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
@@ -135,6 +147,10 @@ export const AuthProvider = ({ children }) => {
     // Some backends don't return token on register
     if (data.access) {
       localStorage.setItem('token', data.access);
+    }
+    
+    if (data.refresh) {
+      localStorage.setItem('refresh', data.refresh);
     }
 
     if (data.user) {
@@ -186,6 +202,7 @@ export const AuthProvider = ({ children }) => {
       // silent fail
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('refresh');
       localStorage.removeItem('user');
       setUser(null);
       setIsAuthenticated(false);
