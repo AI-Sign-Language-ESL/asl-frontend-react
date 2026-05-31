@@ -192,7 +192,10 @@ export const unityService = {
 };
 
 export const youtubeService = {
-  translate: (youtubeUrl) => api.post('/translation/youtube-translate/', { youtube_url: youtubeUrl }),
+  translate: (youtubeUrl) => api.post('/youtube/translate/', { youtube_url: youtubeUrl }),
+  getHistory: () => api.get('/youtube/history/'),
+  getTranslation: (id) => api.get(`/youtube/${id}/`),
+  deleteTranslation: (id) => api.delete(`/youtube/${id}/`),
 };
 
 // =========================

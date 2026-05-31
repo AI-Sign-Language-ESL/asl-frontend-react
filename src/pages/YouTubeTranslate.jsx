@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Languages, Video, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Languages, Loader2, Check, AlertCircle, Trash2, Clock, Play } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { youtubeService } from '../services/api';
 
@@ -12,10 +13,97 @@ const YoutubeIcon = ({ className }) => (
 
 const YouTubeTranslate = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [pollingId, setPollingId] = useState(null);
+  
+  const unityIframeRef = useRef(null);
+
+  useEffect(() => {
+    loadHistory();
+    const id = searchParams.get('id');
+    if (id) {
+      loadTranslation(id);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    let interval;
+    if (pollingId) {
+      interval = setInterval(() => {
+        checkStatus(pollingId);
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [pollingId]);
+
+  const loadHistory = async () => {
+    try {
+      const res = await youtubeService.getHistory();
+      setHistory(res.data);
+    } catch (err) {
+      console.error('Failed to load history', err);
+    }
+  };
+
+  const checkStatus = async (id) => {
+    try {
+      const res = await youtubeService.getTranslation(id);
+      if (res.data.status === 'completed' || res.data.status === 'failed') {
+        setPollingId(null);
+        setLoading(false);
+        if (res.data.status === 'completed') {
+          setResult(res.data);
+          playAnimations(res.data.animation_data);
+        } else {
+          setError('Translation failed during processing.');
+        }
+        loadHistory();
+      }
+    } catch (err) {
+      setPollingId(null);
+      setLoading(false);
+      setError('Error checking translation status.');
+    }
+  };
+
+  const loadTranslation = async (id) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await youtubeService.getTranslation(id);
+      if (res.data.status === 'processing') {
+        setPollingId(id);
+      } else if (res.data.status === 'completed') {
+        setResult(res.data);
+        playAnimations(res.data.animation_data);
+        setLoading(false);
+      } else {
+        setError('This translation failed.');
+        setLoading(false);
+      }
+    } catch (err) {
+      setError('Failed to load translation.');
+      setLoading(false);
+    }
+  };
+
+  const playAnimations = (animations) => {
+    if (!animations || animations.length === 0) return;
+    const unityWindow = unityIframeRef.current?.contentWindow;
+    if (unityWindow && unityWindow.unityInstance) {
+      window.unityInstance = unityWindow.unityInstance;
+    }
+    if (window.unityInstance) {
+      window.unityInstance.SendMessage("tpose", "ReceiveAnimations", JSON.stringify(animations));
+    } else {
+      setTimeout(() => playAnimations(animations), 1000); // Retry if Unity is loading
+    }
+  };
 
   const handleTranslate = async (e) => {
     e.preventDefault();
@@ -35,11 +123,22 @@ const YouTubeTranslate = () => {
 
     try {
       const response = await youtubeService.translate(youtubeUrl);
-      setResult(response.data);
+      setPollingId(response.data.translation_id);
     } catch (err) {
       setError(err.response?.data?.detail || 'Translation failed. Please try again.');
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await youtubeService.deleteTranslation(id);
+      loadHistory();
+      if (result && result.id === id) {
+        setResult(null);
+      }
+    } catch (err) {
+      console.error('Delete failed', err);
     }
   };
 
@@ -48,7 +147,7 @@ const YouTubeTranslate = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl"
+        className="w-full max-w-4xl"
       >
         {/* Header */}
         <div className="text-center mb-10">
@@ -96,7 +195,7 @@ const YouTubeTranslate = () => {
                 </button>
               </div>
               <p className="text-[11px] text-text-muted mt-2">
-                Costs 15 tokens • Supports Arabic speech
+                Costs 15 tokens • Processing may take a minute
               </p>
             </div>
           </form>
@@ -114,84 +213,118 @@ const YouTubeTranslate = () => {
           </motion.div>
         )}
 
-        {/* Result */}
-        {result && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-3xl border border-white/10 overflow-hidden"
-          >
-            {/* Success Header */}
-            <div className="p-6 border-b border-white/10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
-                  <Check className="w-5 h-5 text-success" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-text-main">Translation Complete!</h3>
-                  <p className="text-xs text-text-muted">Your video has been translated to sign language</p>
-                </div>
-              </div>
-
-              {/* Transcribed Text */}
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                <p className="text-xs text-text-muted mb-1">Transcribed Text:</p>
-                <p className="text-sm text-text-main">{result.transcribed_text}</p>
-              </div>
-            </div>
-
-            {/* Sign Language Video */}
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Video className="w-4 h-4 text-primary" />
-                <h4 className="font-bold text-text-main">Sign Language Translation</h4>
-              </div>
-              <div className="rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center">
-                <video
-                  controls
-                  className="w-full h-full object-contain"
-                  src={result.video}
-                >
-                  Your browser does not support video playback.
-                </video>
-              </div>
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-xs text-text-muted">
-                  Remaining tokens: <span className="text-primary font-bold">{result.remaining_tokens}</span>
-                </p>
-                <a
-                  href={result.video}
-                  download
-                  className="text-xs text-primary hover:text-secondary transition-colors"
-                >
-                  Download Video
-                </a>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* How It Works */}
-        {!result && (
-          <div className="glass rounded-2xl border border-white/10 p-6">
-            <h3 className="font-bold text-text-main mb-4">How It Works</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { step: 1, icon: <YoutubeIcon className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
-                { step: 2, icon: <Languages className="w-5 h-5" />, title: 'Transcribe', desc: 'Audio is extracted and converted to text' },
-                { step: 3, icon: <Video className="w-5 h-5" />, title: 'Translate', desc: 'Text is translated to sign language video' },
-              ].map((item) => (
-                <div key={item.step} className="text-center p-4 rounded-xl bg-white/[0.02]">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 text-primary">
-                    {item.icon}
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-6">
+            {/* Result / Unity Avatar Area */}
+            {result ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass rounded-3xl border border-white/10 overflow-hidden"
+              >
+                <div className="p-6 border-b border-white/10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-success" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-text-main">Translation Complete!</h3>
+                      <p className="text-xs text-text-muted">Tokens Used: {result.tokens_used}</p>
+                    </div>
                   </div>
-                  <h4 className="font-bold text-text-main text-sm mb-1">Step {item.step}: {item.title}</h4>
-                  <p className="text-[11px] text-text-muted">{item.desc}</p>
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 max-h-40 overflow-y-auto">
+                    <p className="text-xs text-text-muted mb-1">Transcribed Text:</p>
+                    <p className="text-sm text-text-main">{result.transcript}</p>
+                  </div>
+                  <button 
+                    onClick={() => playAnimations(result.animation_data)}
+                    className="mt-4 px-4 py-2 bg-primary/20 text-primary hover:bg-primary/30 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"
+                  >
+                    <Play className="w-4 h-4" /> Replay Animation
+                  </button>
                 </div>
-              ))}
+                
+                <div className="relative" style={{ minHeight: '400px' }}>
+                  <iframe
+                    ref={unityIframeRef}
+                    src="/unity/index.html"
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    title="Unity Avatar"
+                    allow="autoplay; fullscreen"
+                  />
+                </div>
+              </motion.div>
+            ) : (
+              <div className="glass rounded-3xl border border-white/10 p-6">
+                <h3 className="font-bold text-text-main mb-4">How It Works</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { step: 1, icon: <YoutubeIcon className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
+                    { step: 2, icon: <Languages className="w-5 h-5" />, title: 'Transcribe', desc: 'Audio is extracted and converted to text' },
+                    { step: 3, icon: <Play className="w-5 h-5" />, title: 'Animate', desc: 'Text is translated to sign language avatar triggers' },
+                  ].map((item) => (
+                    <div key={item.step} className="text-center p-4 rounded-xl bg-white/[0.02]">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 text-primary">
+                        {item.icon}
+                      </div>
+                      <h4 className="font-bold text-text-main text-sm mb-1">Step {item.step}: {item.title}</h4>
+                      <p className="text-[11px] text-text-muted">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="md:col-span-1">
+            {/* History Sidebar */}
+            <div className="glass rounded-3xl border border-white/10 p-6 h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-6">
+                <Clock className="w-5 h-5 text-text-muted" />
+                <h3 className="font-bold text-text-main">History</h3>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-3">
+                {history.length === 0 ? (
+                  <p className="text-sm text-text-muted text-center py-8">No YouTube translations yet.</p>
+                ) : (
+                  history.map((item) => (
+                    <div key={item.id} className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-colors group">
+                      <div className="flex items-start justify-between mb-2">
+                        <p className="text-xs text-text-muted truncate max-w-[150px]" title={item.youtube_url}>
+                          {item.youtube_url}
+                        </p>
+                        <button 
+                          onClick={() => handleDelete(item.id)}
+                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400 transition-opacity"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] px-2 py-1 rounded-full ${item.status === 'completed' ? 'bg-success/20 text-success' : item.status === 'failed' ? 'bg-red-500/20 text-red-500' : 'bg-primary/20 text-primary'}`}>
+                          {item.status.toUpperCase()}
+                        </span>
+                        <span className="text-[10px] text-text-muted">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {item.status === 'completed' && (
+                        <button 
+                          onClick={() => loadTranslation(item.id)}
+                          className="w-full mt-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-medium transition-colors"
+                        >
+                          View Translation
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        )}
+        </div>
+
       </motion.div>
     </div>
   );
