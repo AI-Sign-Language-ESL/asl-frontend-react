@@ -117,9 +117,10 @@
     "get_started": "Get Started",
     "per_month": "mo",
     "per_year": "year",
-    "free": { "name": "Free", "desc": "Essential communication for everyone.", "f1": "Basic translation (Text & Voice)", "f2": "Standard 3D Avatar Quality", "f3": "Limited daily recognition", "f4": "Community Support" },
-    "pro": { "name": "Pro", "desc": "For professionals and daily active users.", "f1": "Everything in Free", "f2": "Unlimited tracking", "f3": "HD 3D Avatar rendering", "f4": "EgypTalk Premium Voices", "f5": "Priority Support" },
-    "enterprise": { "name": "Enterprise", "desc": "Custom solutions for hospitals & schools.", "f1": "Dedicated API Access", "f2": "Custom vocabulary", "f3": "On-premise deployment", "f4": "24/7 Phone Support", "f5": "SLA Guarantee" }
+    "free": { "name": "FREE", "desc": "Essential communication tools for everyone.", "f1": "50 weekly tokens", "f2": "Basic text translation", "f3": "Basic sign generation", "f4": "Community support" },
+    "basic": { "name": "BASIC", "desc": "More power for regular use.", "f1": "250 weekly tokens", "f2": "Text-to-Speech", "f3": "Speech-to-Text", "f4": "YouTube Integration", "f5": "Translation History", "f6": "Generation History", "f7": "Saving history costs 2 tokens per item" },
+    "go": { "name": "GO", "desc": "The best value for active users.", "f1": "500 weekly tokens", "f2": "Text-to-Speech", "f3": "Speech-to-Text", "f4": "YouTube Integration", "f5": "Unlimited Translation History", "f6": "Unlimited Generation History", "f7": "Priority Processing", "f8": "Everything in Basic" },
+    "enterprise": { "name": "ENTERPRISE", "desc": "Complete solution for organizations.", "f1": "2000 weekly tokens", "f2": "Create Meetings", "f3": "Meeting Chat History", "f4": "Unlimited Translation History", "f5": "Unlimited Generation History", "f6": "Text-to-Speech", "f7": "Speech-to-Text", "f8": "YouTube Integration", "f9": "Priority Support" }
   },
   "dataset": {
     "title": "Contribute to EASL-10K",
@@ -153,13 +154,25 @@
     "log": "Detection Log",
     "no_detect": "No detections yet"
   },
-  "assistant": {
-    "title": "TAFAHOM Assistant",
+  "fehm": {
+    "title": "Fehm Assistant",
     "placeholder": "Type a message...",
-    "welcome": "Hi there! I'm your TAFAHOM assistant. How can I help you?",
-    "bot_response": "I'm a beta demo bot right now, but soon I'll be able to help you deeply with TAFAHOM integrations!",
-    "sug1": "How does it work?",
-    "sug2": "Pricing plans",
-    "sug3": "API access"
+    "welcome": "Hi there! I'm Fehm, your TAFAHOM assistant. How can I help you?",
+    "welcome_loading": "Loading...",
+    "error": "Sorry, I couldn't process your request. Please try again.",
+    "error_empty": "I'm not sure how to respond to that. Could you rephrase?",
+    "voice_start": "Recording...",
+    "voice_stop": "Stop recording",
+    "voice_cancel": "Cancel recording",
+    "voice_send": "Send voice",
+    "voice_preview": "Preview recording",
+    "voice_unsupported": "Voice recording is not supported on this device.",
+    "voice_denied": "Microphone access was denied. Please allow microphone permissions.",
+    "voice_error": "Recording failed. Please try again.",
+    "voice_uploading": "Uploading voice message...",
+    "action_join": "Join",
+    "action_upgrade": "Upgrade Plan",
+    "action_open": "Open",
+    "action_contact": "Contact Support"
   }
 }

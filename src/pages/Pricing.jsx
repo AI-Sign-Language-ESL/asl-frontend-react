@@ -7,43 +7,64 @@ import { useAuth } from '../context/AuthContext';
 
 const plans = [
   {
-    name: "Free",
-    desc: "Essential communication for everyone.",
+    name: "FREE",
+    desc: "Essential communication tools for everyone.",
     price: "0",
     plan_type: "free",
     features: [
-      "Basic translation (Text & Voice)",
-      "Standard 3D Avatar Quality",
-      "Limited daily recognition minutes",
-      "Community Support"
+      "50 weekly tokens",
+      "Basic text translation",
+      "Basic sign generation",
+      "Community support"
     ]
   },
   {
-    name: "Pro",
-    desc: "For professionals and daily active users.",
-    price: "12",
-    yearlyPrice: "120",
-    popular: true,
-    plan_type: "premium",
+    name: "BASIC",
+    desc: "More power for regular use.",
+    price: "100",
+    plan_type: "basic",
     features: [
-      "Everything in Free",
-      "Unlimited Real-time tracking",
-      "HD 3D Avatar rendering",
-      "EgypTalk Premium Voices",
-      "Priority Email Support"
+      "250 weekly tokens",
+      "Text-to-Speech",
+      "Speech-to-Text",
+      "YouTube Integration",
+      "Translation History",
+      "Generation History",
+      "Saving history costs 2 tokens per item"
     ]
   },
   {
-    name: "Enterprise",
-    desc: "Custom solutions for hospitals & schools.",
-    price: "Custom",
+    name: "GO",
+    desc: "The best value for active users.",
+    price: "175",
+    popular: true,
+    plan_type: "go",
+    features: [
+      "500 weekly tokens",
+      "Text-to-Speech",
+      "Speech-to-Text",
+      "YouTube Integration",
+      "Unlimited Translation History",
+      "Unlimited Generation History",
+      "Priority Processing",
+      "Everything in Basic"
+    ]
+  },
+  {
+    name: "ENTERPRISE",
+    desc: "Complete solution for organizations.",
+    price: "750",
     plan_type: "enterprise",
     features: [
-      "Dedicated API Access",
-      "Custom vocabulary models",
-      "On-premise deployment options",
-      "24/7 Phone Support",
-      "SLA Guarantee"
+      "2000 weekly tokens",
+      "Create Meetings",
+      "Meeting Chat History",
+      "Unlimited Translation History",
+      "Unlimited Generation History",
+      "Text-to-Speech",
+      "Speech-to-Text",
+      "YouTube Integration",
+      "Priority Support"
     ]
   }
 ];
@@ -116,7 +137,7 @@ const Pricing = () => {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
         {plans.map((plan, i) => {
           const isOrgDisabled = user?.role === 'organization' && plan.plan_type === 'free';
           

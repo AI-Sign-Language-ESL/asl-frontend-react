@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout';
 import ParticlesBackground from './components/ParticlesBackground';
-import AssistantBadge from './components/AssistantBadge';
+import FehmBot from './components/FehmBot';
 
 import Splash from './pages/Splash';
 import Home from './pages/Home';
@@ -199,7 +199,7 @@ export default function App() {
         }}
       />
       <AnimatedRoutes />
-      <AssistantBadge />
+      <FehmBot />
     </Router>
   );
 }

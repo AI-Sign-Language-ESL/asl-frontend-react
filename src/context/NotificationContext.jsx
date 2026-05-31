@@ -63,6 +63,16 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+  const clearAll = async () => {
+    setNotifications([]);
+    try {
+      await notificationService.clearAll();
+    } catch (err) {
+      console.error('Failed to clear notifications', err);
+      fetchNotifications();
+    }
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -71,6 +81,7 @@ export const NotificationProvider = ({ children }) => {
         markAsRead,
         markAllAsRead,
         removeNotification,
+        clearAll,
         refreshNotifications: fetchNotifications,
         loading
       }}

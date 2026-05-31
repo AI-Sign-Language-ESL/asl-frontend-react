@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell, X, Clock, Video, CreditCard,
-  Zap, Users, Calendar, CheckCheck, CheckCircle, XCircle
+  Zap, Users, Calendar, CheckCheck, CheckCircle, XCircle, Trash2, Upload
 } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,10 +21,44 @@ const formatRelativeTime = (isoString) => {
   return `${days}d ago`;
 };
 
+const ConfirmDialog = ({ open, title, message, onConfirm, onCancel }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onCancel} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative glass rounded-2xl border border-border-subtle p-6 max-w-sm w-full shadow-2xl"
+      >
+        <h3 className="font-bold text-text-main text-lg mb-2">{title}</h3>
+        <p className="text-text-muted text-sm mb-6">{message}</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-text-main transition-colors text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors text-sm"
+          >
+            Delete
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const NotificationBell = () => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
+  const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } = useNotifications();
   const { isAuthenticated } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -48,6 +83,7 @@ const NotificationBell = () => {
       case 'participant_joined': return <Users className="w-4 h-4" />;
       case 'contribution_approved': return <CheckCircle className="w-4 h-4" />;
       case 'contribution_rejected': return <XCircle className="w-4 h-4" />;
+      case 'contribution_submitted': return <Upload className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
@@ -60,12 +96,42 @@ const NotificationBell = () => {
       case 'meeting_reminder': return 'bg-secondary/20 text-secondary';
       case 'contribution_approved': return 'bg-green-500/20 text-green-500';
       case 'contribution_rejected': return 'bg-red-500/20 text-red-500';
+      case 'contribution_submitted': return 'bg-blue-500/20 text-blue-500';
       default: return 'bg-white/10 text-text-muted';
+    }
+  };
+
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id);
+    setShowDropdown(false);
+    if (notification.action_url) {
+      navigate(notification.action_url);
     }
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        title="Delete this notification?"
+        message="This action cannot be undone."
+        onConfirm={() => {
+          if (deleteTargetId) removeNotification(deleteTargetId);
+          setDeleteTargetId(null);
+        }}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+      <ConfirmDialog
+        open={showClearConfirm}
+        title="Clear all notifications?"
+        message="This will permanently delete all your notifications. This action cannot be undone."
+        onConfirm={() => {
+          clearAll();
+          setShowClearConfirm(false);
+        }}
+        onCancel={() => setShowClearConfirm(false)}
+      />
+
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         className="relative p-2.5 rounded-full hover:bg-white/10 transition-colors text-text-muted hover:text-text-main"
@@ -113,6 +179,15 @@ const NotificationBell = () => {
                         <CheckCheck className="w-4 h-4" />
                       </button>
                     )}
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={() => setShowClearConfirm(true)}
+                        className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-text-muted hover:text-red-500"
+                        title="Clear all notifications"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -137,12 +212,7 @@ const NotificationBell = () => {
                             "p-4 flex gap-3 hover:bg-white/5 transition-colors cursor-pointer relative group",
                             !notification.read && "bg-primary/5"
                           )}
-                          onClick={() => {
-                            markAsRead(notification.id);
-                            if (notification.action_url) {
-                              window.location.href = notification.action_url;
-                            }
-                          }}
+                          onClick={() => handleNotificationClick(notification)}
                         >
                           {/* Unread indicator */}
                           {!notification.read && (
@@ -174,7 +244,7 @@ const NotificationBell = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  removeNotification(notification.id);
+                                  setDeleteTargetId(notification.id);
                                 }}
                                 className="p-1 hover:bg-red-500/20 rounded opacity-0 group-hover:opacity-100 transition-all text-text-muted hover:text-red-500"
                               >
@@ -195,7 +265,10 @@ const NotificationBell = () => {
                 {/* Footer */}
                 {notifications.length > 0 && (
                   <div className="p-3 border-t border-border-subtle bg-bg-card/50">
-                    <button className="w-full py-2 text-center text-sm text-text-muted hover:text-text-main transition-colors">
+                    <button
+                      onClick={() => { setShowDropdown(false); navigate('/settings'); }}
+                      className="w-full py-2 text-center text-sm text-text-muted hover:text-text-main transition-colors"
+                    >
                       View all notifications
                     </button>
                   </div>

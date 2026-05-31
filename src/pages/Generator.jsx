@@ -28,24 +28,8 @@ const Generator = () => {
 
     try {
 
-      // =====================================
-      // CALL DJANGO
-      // =====================================
-
-      const response = await fetch(
-        "https://api.tafahom.io/api/v1/translation/unity-sign/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: inputText,
-          }),
-        }
-      );
-
-      const data = await response.json();
+      const response = await unityService.generateSign(inputText);
+      const data = response.data;
 
       console.log(
         "DJANGO RESPONSE:",

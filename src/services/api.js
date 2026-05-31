@@ -183,32 +183,12 @@ export const translatorService = {
 
 export const generatorService = {
   generate: (text) =>
-    axios.post(
-      "https://api.tafahom.io/api/v1/translation/to-sign/",
-      {
-        text: text,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    ),
+    api.post('/translation/to-sign/', { text }),
 };
 
 export const unityService = {
   generateSign: (text) =>
-    axios.post(
-      "https://api.tafahom.io/api/v1/translation/unity-sign/",
-      {
-        text: text,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    ),
+    api.post('/translation/unity-sign/', { text }),
 };
 
 export const youtubeService = {
@@ -334,6 +314,26 @@ export const notificationService = {
   markRead: (id) => api.post(`/notifications/${id}/read/`),
   markAllRead: () => api.post('/notifications/read-all/'),
   remove: (id) => api.delete(`/notifications/${id}/delete/`),
+  clearAll: () => api.delete('/notifications/clear-all/'),
+};
+
+// =========================
+// CHATBOT (FEHM)
+// =========================
+export const chatbotService = {
+  getWelcome: () => api.get('/ai/welcome/'),
+  createConversation: () => api.post('/ai/conversations/', {}),
+  sendMessage: (message, conversationId) =>
+    api.post(`/ai/conversations/${conversationId}/messages/send/`, { content: message }),
+  sendAction: (actionId, conversationId) =>
+    api.post(`/ai/conversations/${conversationId}/messages/send/`, { content: actionId }),
+  sendVoiceMessage: (audioBlob, conversationId) => {
+    console.warn("sendVoiceMessage: no voice-messages endpoint exists on backend (got 404). Using sendMessage as fallback.");
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    if (conversationId) formData.append('conversation_id', conversationId);
+    return api.post('/ai/conversations/voice-messages/', formData);
+  },
 };
 
 export default api;
