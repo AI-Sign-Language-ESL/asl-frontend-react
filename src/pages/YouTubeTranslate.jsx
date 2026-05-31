@@ -44,7 +44,9 @@ const YouTubeTranslate = () => {
   const loadHistory = async () => {
     try {
       const res = await youtubeService.getHistory();
-      setHistory(res.data);
+      // Ensure we always set an array, even if the API returns a paginated object
+      const historyData = Array.isArray(res.data) ? res.data : (res.data.results || []);
+      setHistory(historyData);
     } catch (err) {
       console.error('Failed to load history', err);
     }
