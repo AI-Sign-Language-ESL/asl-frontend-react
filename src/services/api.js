@@ -200,6 +200,7 @@ export const youtubeService = {
   deleteTranslation: (id) => api.delete(`/youtube/${id}/`),
   checkTranscript: (videoId) => api.post('/youtube/transcript/', { video_id: videoId }),
   processTranscript: (data) => api.post('/youtube/process-transcript/', data),
+  submitBrowserTranscript: (data) => api.post('/youtube/browser-transcript/', data),
 };
 
 // =========================

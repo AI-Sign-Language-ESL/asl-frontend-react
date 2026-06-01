@@ -1,7 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Languages, Loader2, AlertCircle, Play, RotateCcw, Upload, FileVideo, CheckCircle2, X, Image, FileWarning, ExternalLink } from 'lucide-react';
+import { Languages, Loader2, AlertCircle, Play, RotateCcw, Upload, FileVideo, CheckCircle2, X, FileWarning, ExternalLink, Search, Youtube } from 'lucide-react';
 import { youtubeService } from '../services/api';
+import { useYoutubeTranscript } from '../hooks/useYoutubeTranscript';
+import { isValidYoutubeUrl } from '../services/youtubeTranscriptService';
+import TranscriptPreview from '../components/TranscriptPreview';
+import TranscriptErrorBoundary from '../components/TranscriptErrorBoundary';
 
 const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm'];
 const ALLOWED_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
@@ -25,11 +29,12 @@ const YoutubeIcon = ({ className }) => (
 
 const YouTubeTranslate = () => {
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [state, setState] = useState('idle');
+
+  const [submitState, setSubmitState] = useState('idle');
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('Transcript');
+  const [submitting, setSubmitting] = useState(false);
 
   // Upload states
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -40,6 +45,19 @@ const YouTubeTranslate = () => {
 
   const unityIframeRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const {
+    state: transcriptState,
+    segments,
+    transcript,
+    error: transcriptError,
+    details: transcriptDetails,
+    videoId,
+    videoMeta,
+    extract: extractTranscript,
+    reset: resetTranscript,
+    retry: retryTranscript,
+  } = useYoutubeTranscript();
 
   const validateFile = (file) => {
     const ext = '.' + file.name.split('.').pop().toLowerCase();
@@ -91,138 +109,69 @@ const YouTubeTranslate = () => {
     if (file) handleFileSelect(file);
   };
 
-  const extractVideoId = (url) => {
-    try {
-      const u = new URL(url);
-      let vid = u.searchParams.get('v');
-      if (!vid && u.pathname.startsWith('/embed/')) {
-        vid = u.pathname.split('/')[2];
-      }
-      if (!vid && u.pathname.startsWith('/shorts/')) {
-        vid = u.pathname.split('/')[2];
-      }
-      return vid || null;
-    } catch {
-      return null;
-    }
-  };
-
-  const handleTranslate = async (e) => {
+  const handleExtractTranscript = (e) => {
     e.preventDefault();
     if (!youtubeUrl.trim()) {
       setError('Please enter a YouTube URL');
       return;
     }
-
-    if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+    if (!isValidYoutubeUrl(youtubeUrl)) {
       setError('Please enter a valid YouTube URL');
       return;
     }
-
-    const videoId = extractVideoId(youtubeUrl);
-    if (!videoId) {
-      setError('Could not extract video ID from URL');
-      return;
-    }
-
-    setLoading(true);
     setError('');
-    setState('checking');
+    setSubmitState('idle');
     setResult(null);
-    setSelectedFile(null);
-    setFileError('');
-
-    try {
-      const response = await youtubeService.checkTranscript(videoId);
-      const data = response.data;
-
-      if (data.transcript && data.transcript.length >= 10) {
-        // Transcript available from server
-        setResult({
-          transcript: data.transcript,
-          gloss: data.gloss || [],
-          animations: data.animations || [],
-          source: 'YouTube',
-        });
-        setState('success');
-        setLoading(false);
-        setTimeout(() => playAnimations(data.animations), 500);
-        return;
-      }
-
-      // No transcript or too short → fallback
-      setState('upload_required');
-      setLoading(false);
-    } catch (err) {
-      const status = err.response?.status;
-      if (status === 403 || status === 451) {
-        setState('upload_required');
-      } else {
-        setState('upload_required');
-        setError(err.response?.data?.error || 'YouTube processing unavailable.');
-      }
-      setLoading(false);
-    }
+    resetTranscript();
+    extractTranscript(youtubeUrl);
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-
-    setFileError('');
+  const handleSubmitToBackend = async () => {
+    if (!transcript) return;
+    setSubmitting(true);
     setError('');
-    setState('uploading');
-    setUploadProgress(0);
-
-    const formData = new FormData();
-    formData.append('video_file', selectedFile);
 
     try {
-      const response = await youtubeService.uploadVideo(formData, {
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percent);
-        },
-        timeout: 600000,
+      const response = await youtubeService.submitBrowserTranscript({
+        video_id: videoId || '',
+        title: videoMeta?.title || '',
+        transcript,
+        segments: segments || [],
+        language: 'ar',
       });
 
       const data = response.data;
 
       if (!data.success) {
-        setState('upload_required');
-        setError(data.error || 'Upload processing failed.');
+        setError(data.error || 'Translation failed.');
+        setSubmitting(false);
         return;
       }
 
-      // Transition to processing stages
-      setState('processing');
-      setProcessingStepIndex(1);
-
-      for (let i = 1; i < UPLOAD_STAGES.length; i++) {
-        setProcessingStepIndex(i);
-        await new Promise((r) => setTimeout(r, 1500));
-      }
-
       setResult({
-        transcript: data.transcript || '',
+        transcript: data.transcript || transcript,
         gloss: data.gloss || [],
         animations: data.animations || [],
-        source: 'Upload',
+        source: 'YouTube (Browser)',
       });
-      setState('success');
-      setActiveTab('Transcript');
+      setSubmitState('success');
+      setSubmitting(false);
 
       setTimeout(() => playAnimations(data.animations), 500);
     } catch (err) {
       const data = err.response?.data;
-      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-        setError('Upload timed out. Please try a smaller file or check your connection.');
-      } else if (err.response?.status === 413) {
-        setError('File too large for server. Maximum: 500 MB.');
-      } else {
-        setError(data?.error || data?.detail || 'Upload failed. Please try another file.');
-      }
-      setState('upload_required');
+      setError(data?.error || data?.detail || 'Failed to submit transcript. Please try again.');
+      setSubmitting(false);
     }
+  };
+
+  const handleFallbackUpload = () => {
+    resetTranscript();
+    setSubmitState('upload_required');
+  };
+
+  const handleRetryExtraction = () => {
+    retryTranscript();
   };
 
   const playAnimations = (animations) => {
@@ -260,7 +209,68 @@ const YouTubeTranslate = () => {
     return name.split('.').pop().toUpperCase();
   };
 
-  const getVideoIdFromUrl = () => extractVideoId(youtubeUrl);
+  const handleUploadSubmit = async () => {
+    if (!selectedFile) return;
+
+    setFileError('');
+    setError('');
+    setSubmitState('uploading');
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append('video_file', selectedFile);
+
+    try {
+      const response = await youtubeService.uploadVideo(formData, {
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        },
+        timeout: 600000,
+      });
+
+      const data = response.data;
+
+      if (!data.success) {
+        setSubmitState('upload_required');
+        setError(data.error || 'Upload processing failed.');
+        return;
+      }
+
+      setSubmitState('processing');
+      setProcessingStepIndex(1);
+
+      for (let i = 1; i < UPLOAD_STAGES.length; i++) {
+        setProcessingStepIndex(i);
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+
+      setResult({
+        transcript: data.transcript || '',
+        gloss: data.gloss || [],
+        animations: data.animations || [],
+        source: 'Upload',
+      });
+      setSubmitState('success');
+      setActiveTab('Transcript');
+
+      setTimeout(() => playAnimations(data.animations), 500);
+    } catch (err) {
+      const data = err.response?.data;
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Upload timed out. Please try a smaller file or check your connection.');
+      } else if (err.response?.status === 413) {
+        setError('File too large for server. Maximum: 500 MB.');
+      } else {
+        setError(data?.error || data?.detail || 'Upload failed. Please try another file.');
+      }
+      setSubmitState('upload_required');
+    }
+  };
+
+  const showUploadFallback = () => {
+    return submitState === 'upload_required' || (transcriptState === 'error' && transcriptError?.includes('upload'));
+  };
 
   return (
     <div className="min-h-[calc(100vh-6rem)] flex flex-col items-center pt-12 pb-12 px-6">
@@ -279,44 +289,79 @@ const YouTubeTranslate = () => {
           </p>
         </div>
 
-        <div className="glass rounded-3xl border border-white/10 p-6 mb-6">
-          <form onSubmit={handleTranslate} className="space-y-4">
-            <div>
-              <label className="text-xs text-text-muted mb-2 block uppercase tracking-wider">
-                YouTube URL
-              </label>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-main placeholder-text-muted focus:outline-none focus:border-primary transition-colors"
-                  disabled={loading}
-                />
-                <button
-                  type="submit"
-                  disabled={loading || !youtubeUrl.trim()}
-                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold hover:shadow-lg hover:shadow-red-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <Languages className="w-4 h-4" />
-                      Translate
-                    </>
-                  )}
-                </button>
+        {(submitState === 'idle' || submitState === 'upload_required') && transcriptState !== 'extracting' && transcriptState !== 'success' && (
+          <div className="glass rounded-3xl border border-white/10 p-6 mb-6">
+            <form onSubmit={handleExtractTranscript} className="space-y-4">
+              <div>
+                <label className="text-xs text-text-muted mb-2 block uppercase tracking-wider">
+                  YouTube URL
+                </label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-main placeholder-text-muted focus:outline-none focus:border-primary transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!youtubeUrl.trim()}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold hover:shadow-lg hover:shadow-red-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Search className="w-4 h-4" />
+                    Extract
+                  </button>
+                </div>
               </div>
-            </div>
-          </form>
-        </div>
+            </form>
+          </div>
+        )}
 
-        {error && (state === 'idle' || state === 'checking') && (
+        {/* Transcript Extraction States */}
+        {transcriptState === 'extracting' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="glass rounded-3xl border border-white/10 p-12 mb-6"
+          >
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
+              <p className="text-text-muted text-lg">Extracting transcript from YouTube...</p>
+              <p className="text-text-muted text-sm">This happens in your browser — no server load.</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Success → Show Transcript Preview */}
+        {transcriptState === 'success' && transcript && (
+          <div className="mb-6">
+            <TranscriptPreview
+              segments={segments}
+              transcript={transcript}
+              videoMeta={videoMeta}
+              videoId={videoId}
+              onSubmit={handleSubmitToBackend}
+              submitting={submitting}
+              onCancel={() => resetTranscript()}
+            />
+          </div>
+        )}
+
+        {/* Error State */}
+        {transcriptState === 'error' && (
+          <div className="mb-6">
+            <TranscriptErrorBoundary
+              error={transcriptError}
+              details={transcriptDetails}
+              onRetry={handleRetryExtraction}
+              onFallbackUpload={handleFallbackUpload}
+            />
+          </div>
+        )}
+
+        {/* General error message */}
+        {error && (submitState === 'idle' || transcriptState === 'idle') && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -327,20 +372,8 @@ const YouTubeTranslate = () => {
           </motion.div>
         )}
 
-        {state === 'checking' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="glass rounded-3xl border border-white/10 p-12 mb-6"
-          >
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-              <p className="text-text-muted text-lg">Checking YouTube access...</p>
-            </div>
-          </motion.div>
-        )}
-
-        {state === 'upload_required' && (
+        {/* UPLOAD FALLBACK UI */}
+        {showUploadFallback() && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -348,7 +381,11 @@ const YouTubeTranslate = () => {
           >
             <div className="text-center mb-6">
               <AlertCircle className="w-10 h-10 text-yellow-500 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-text-main mb-2">This video cannot be processed directly from YouTube.</h3>
+              <h3 className="text-xl font-bold text-text-main mb-2">
+                {transcriptState === 'error'
+                  ? 'Transcript extraction failed'
+                  : 'This video cannot be processed directly from YouTube.'}
+              </h3>
               <p className="text-text-muted text-sm">Choose an alternative method below.</p>
             </div>
 
@@ -361,15 +398,17 @@ const YouTubeTranslate = () => {
                   <Upload className="w-5 h-5" />
                   Upload Video
                 </button>
-                <a
-                  href={`https://youtube.com/watch?v=${getVideoIdFromUrl() || ''}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-4 rounded-xl bg-white/5 text-text-main hover:bg-white/10 text-sm font-bold transition-all flex items-center justify-center gap-2 border border-white/10"
-                >
-                  <ExternalLink className="w-5 h-5" />
-                  Open Transcript Manually
-                </a>
+                {(youtubeUrl || videoId) && (
+                  <a
+                    href={`https://youtube.com/watch?v=${videoId || ''}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-4 rounded-xl bg-white/5 text-text-main hover:bg-white/10 text-sm font-bold transition-all flex items-center justify-center gap-2 border border-white/10"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                    Open Transcript Manually
+                  </a>
+                )}
               </div>
             ) : null}
 
@@ -400,7 +439,7 @@ const YouTubeTranslate = () => {
                     <div className="flex gap-3">
                       <button
                         type="button"
-                        onClick={handleUpload}
+                        onClick={handleUploadSubmit}
                         className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center gap-2"
                       >
                         <Upload className="w-4 h-4" />
@@ -431,7 +470,6 @@ const YouTubeTranslate = () => {
               </motion.div>
             )}
 
-            {/* Also allow drag-drop anywhere in this card */}
             {!selectedFile && (
               <div
                 onDragOver={handleDragOver}
@@ -455,7 +493,7 @@ const YouTubeTranslate = () => {
               </div>
             )}
 
-            {error && state === 'upload_required' && !fileError && (
+            {error && !fileError && (
               <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -468,7 +506,8 @@ const YouTubeTranslate = () => {
           </motion.div>
         )}
 
-        {state === 'uploading' && (
+        {/* UPLOAD PROGRESS */}
+        {submitState === 'uploading' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -501,7 +540,8 @@ const YouTubeTranslate = () => {
           </motion.div>
         )}
 
-        {state === 'processing' && (
+        {/* PROCESSING STAGES */}
+        {submitState === 'processing' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -541,7 +581,8 @@ const YouTubeTranslate = () => {
           </motion.div>
         )}
 
-        {state === 'success' && result && (
+        {/* SUCCESS RESULT */}
+        {submitState === 'success' && result && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -556,12 +597,11 @@ const YouTubeTranslate = () => {
                   <div>
                     <h3 className="font-bold text-text-main">Translation Complete</h3>
                     <p className="text-xs text-text-muted">
-                      Source: {result.source || 'YouTube'}
+                      Source: {result.source || 'YouTube'} &bull; Browser-extracted transcript
                     </p>
                   </div>
                 </div>
 
-                {/* Tabs */}
                 <div className="flex gap-1 mb-4 bg-white/5 rounded-xl p-1">
                   {TABS.map((tab) => (
                     <button
@@ -655,13 +695,14 @@ const YouTubeTranslate = () => {
           </motion.div>
         )}
 
-        {state === 'idle' && (
+        {/* IDLE STATE */}
+        {submitState === 'idle' && transcriptState === 'idle' && (
           <div className="glass rounded-3xl border border-white/10 p-6">
             <h3 className="font-bold text-text-main mb-4">How It Works</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { step: 1, icon: <YoutubeIcon className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
-                { step: 2, icon: <Languages className="w-5 h-5" />, title: 'Transcribe & Gloss', desc: 'Arabic transcript is extracted and converted to sign gloss' },
+                { step: 2, icon: <Search className="w-5 h-5" />, title: 'Extract Transcript', desc: 'Transcript is extracted directly in your browser — no server needed' },
                 { step: 3, icon: <Play className="w-5 h-5" />, title: 'Animate', desc: 'Text is translated to sign language avatar animations' },
               ].map((item) => (
                 <div key={item.step} className="text-center p-4 rounded-xl bg-white/[0.02]">

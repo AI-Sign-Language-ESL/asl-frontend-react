@@ -154,6 +154,24 @@
     "log": "Detection Log",
     "no_detect": "No detections yet"
   },
+  "youtube": {
+    "extract": "Extract",
+    "extracting": "Extracting transcript from YouTube...",
+    "browser_hint": "This happens in your browser — no server load.",
+    "transcript_ready": "Transcript Extracted",
+    "preview": "Transcript Preview",
+    "translate_to_sign": "Translate to Sign Language",
+    "translating": "Translating...",
+    "transcript_failed": "Transcript Extraction Failed",
+    "network_error": "We could not reach the transcript service. This might be due to your network or YouTube restrictions.",
+    "no_captions": "This video does not have captions available. You can upload the video file instead.",
+    "upload_fallback": "Upload Video Instead",
+    "try_again": "Try Again",
+    "words": "words",
+    "chars": "chars",
+    "long_transcript": "Long transcript ({chars} chars). May be truncated during processing.",
+    "source_browser": "YouTube (Browser)"
+  },
   "fehm": {
     "title": "Fehm Assistant",
     "placeholder": "Type a message...",
