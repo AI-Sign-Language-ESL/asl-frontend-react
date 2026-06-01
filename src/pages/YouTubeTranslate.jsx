@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Languages, Loader2, Check, AlertCircle, Trash2, Clock, Play } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Languages, Loader2, AlertCircle, Play, RotateCcw, Upload } from 'lucide-react';
 import { youtubeService } from '../services/api';
 
 const YoutubeIcon = ({ className }) => (
@@ -12,100 +10,13 @@ const YoutubeIcon = ({ className }) => (
 );
 
 const YouTubeTranslate = () => {
-  const { user } = useAuth();
-  const [searchParams] = useSearchParams();
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [state, setState] = useState('idle');
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [pollingId, setPollingId] = useState(null);
-  
+  const [error, setError] = useState('');
+
   const unityIframeRef = useRef(null);
-
-  useEffect(() => {
-    loadHistory();
-    const id = searchParams.get('id');
-    if (id) {
-      loadTranslation(id);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    let interval;
-    if (pollingId) {
-      interval = setInterval(() => {
-        checkStatus(pollingId);
-      }, 3000);
-    }
-    return () => clearInterval(interval);
-  }, [pollingId]);
-
-  const loadHistory = async () => {
-    try {
-      const res = await youtubeService.getHistory();
-      // Ensure we always set an array, even if the API returns a paginated object
-      const historyData = Array.isArray(res.data) ? res.data : (res.data.results || []);
-      setHistory(historyData);
-    } catch (err) {
-      console.error('Failed to load history', err);
-    }
-  };
-
-  const checkStatus = async (id) => {
-    try {
-      const res = await youtubeService.getTranslation(id);
-      if (res.data.status === 'completed' || res.data.status === 'failed') {
-        setPollingId(null);
-        setLoading(false);
-        if (res.data.status === 'completed') {
-          setResult(res.data);
-          playAnimations(res.data.animation_data);
-        } else {
-          setError('Translation failed during processing.');
-        }
-        loadHistory();
-      }
-    } catch (err) {
-      setPollingId(null);
-      setLoading(false);
-      setError('Error checking translation status.');
-    }
-  };
-
-  const loadTranslation = async (id) => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await youtubeService.getTranslation(id);
-      if (res.data.status === 'processing') {
-        setPollingId(id);
-      } else if (res.data.status === 'completed') {
-        setResult(res.data);
-        playAnimations(res.data.animation_data);
-        setLoading(false);
-      } else {
-        setError('This translation failed.');
-        setLoading(false);
-      }
-    } catch (err) {
-      setError('Failed to load translation.');
-      setLoading(false);
-    }
-  };
-
-  const playAnimations = (animations) => {
-    if (!animations || animations.length === 0) return;
-    const unityWindow = unityIframeRef.current?.contentWindow;
-    if (unityWindow && unityWindow.unityInstance) {
-      window.unityInstance = unityWindow.unityInstance;
-    }
-    if (window.unityInstance) {
-      window.unityInstance.SendMessage("tpose", "ReceiveAnimations", JSON.stringify(animations));
-    } else {
-      setTimeout(() => playAnimations(animations), 1000); // Retry if Unity is loading
-    }
-  };
 
   const handleTranslate = async (e) => {
     e.preventDefault();
@@ -121,27 +32,59 @@ const YouTubeTranslate = () => {
 
     setLoading(true);
     setError('');
+    setState('loading');
     setResult(null);
 
     try {
-      const response = await youtubeService.translate(youtubeUrl);
-      setPollingId(response.data.translation_id);
+      const response = await youtubeService.signTranslate(youtubeUrl);
+      const data = response.data;
+
+      if (!data.success) {
+        setState('upload_required');
+        setError(data.error || 'Unable to process this YouTube video.');
+        setLoading(false);
+        return;
+      }
+
+      setResult(data);
+      setState('success');
+      setLoading(false);
+
+      setTimeout(() => playAnimations(data.animations), 500);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Translation failed. Please try again.');
+      const data = err.response?.data;
+      if (data && !data.success && data.requires_upload) {
+        setState('upload_required');
+        setError(data.error || 'Unable to process this YouTube video.');
+      } else {
+        setState('idle');
+        setError(data?.error || data?.detail || 'Translation failed. Please try again.');
+      }
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await youtubeService.deleteTranslation(id);
-      loadHistory();
-      if (result && result.id === id) {
-        setResult(null);
-      }
-    } catch (err) {
-      console.error('Delete failed', err);
+  const playAnimations = (animations) => {
+    if (!animations || animations.length === 0) return;
+    const unityWindow = unityIframeRef.current?.contentWindow;
+    if (unityWindow && unityWindow.unityInstance) {
+      window.unityInstance = unityWindow.unityInstance;
     }
+    if (window.unityInstance) {
+      window.unityInstance.SendMessage("tpose", "ReceiveAnimations", JSON.stringify(animations));
+    } else {
+      setTimeout(() => playAnimations(animations), 500);
+    }
+  };
+
+  const handleReplay = () => {
+    if (result?.animations) {
+      playAnimations(result.animations);
+    }
+  };
+
+  const handleUploadRedirect = () => {
+    window.location.href = '/upload';
   };
 
   return (
@@ -151,18 +94,16 @@ const YouTubeTranslate = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-4xl"
       >
-        {/* Header */}
         <div className="text-center mb-10">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/20">
             <YoutubeIcon className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-text-main mb-2">YouTube Translation</h1>
+          <h1 className="text-3xl font-bold text-text-main mb-2">YouTube Sign Translation</h1>
           <p className="text-text-muted max-w-md mx-auto">
-            Paste a YouTube video URL and watch it translated to sign language
+            Paste an Arabic YouTube video URL and watch the avatar perform sign language
           </p>
         </div>
 
-        {/* Input Form */}
         <div className="glass rounded-3xl border border-white/10 p-6 mb-6">
           <form onSubmit={handleTranslate} className="space-y-4">
             <div>
@@ -186,7 +127,7 @@ const YouTubeTranslate = () => {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
+                      Translating...
                     </>
                   ) : (
                     <>
@@ -196,15 +137,11 @@ const YouTubeTranslate = () => {
                   )}
                 </button>
               </div>
-              <p className="text-[11px] text-text-muted mt-2">
-                Costs 15 tokens • Processing may take a minute
-              </p>
             </div>
           </form>
         </div>
 
-        {/* Error Message */}
-        {error && (
+        {error && (state !== 'upload_required') && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -215,117 +152,130 @@ const YouTubeTranslate = () => {
           </motion.div>
         )}
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
-            {/* Result / Unity Avatar Area */}
-            {result ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass rounded-3xl border border-white/10 overflow-hidden"
-              >
-                <div className="p-6 border-b border-white/10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
-                      <Check className="w-5 h-5 text-success" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-text-main">Translation Complete!</h3>
-                      <p className="text-xs text-text-muted">Tokens Used: {result.tokens_used}</p>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 max-h-40 overflow-y-auto">
-                    <p className="text-xs text-text-muted mb-1">Transcribed Text:</p>
-                    <p className="text-sm text-text-main">{result.transcript}</p>
-                  </div>
-                  <button 
-                    onClick={() => playAnimations(result.animation_data)}
-                    className="mt-4 px-4 py-2 bg-primary/20 text-primary hover:bg-primary/30 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"
-                  >
-                    <Play className="w-4 h-4" /> Replay Animation
-                  </button>
-                </div>
-                
-                <div className="relative" style={{ minHeight: '400px' }}>
-                  <iframe
-                    ref={unityIframeRef}
-                    src="/unity/index.html"
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                    title="Unity Avatar"
-                    allow="autoplay; fullscreen"
-                  />
-                </div>
-              </motion.div>
-            ) : (
-              <div className="glass rounded-3xl border border-white/10 p-6">
-                <h3 className="font-bold text-text-main mb-4">How It Works</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[
-                    { step: 1, icon: <YoutubeIcon className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
-                    { step: 2, icon: <Languages className="w-5 h-5" />, title: 'Transcribe', desc: 'Audio is extracted and converted to text' },
-                    { step: 3, icon: <Play className="w-5 h-5" />, title: 'Animate', desc: 'Text is translated to sign language avatar triggers' },
-                  ].map((item) => (
-                    <div key={item.step} className="text-center p-4 rounded-xl bg-white/[0.02]">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 text-primary">
-                        {item.icon}
-                      </div>
-                      <h4 className="font-bold text-text-main text-sm mb-1">Step {item.step}: {item.title}</h4>
-                      <p className="text-[11px] text-text-muted">{item.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+        {state === 'loading' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="glass rounded-3xl border border-white/10 p-12 mb-6"
+          >
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
+              <p className="text-text-muted text-lg">Processing Arabic Transcript...</p>
+            </div>
+          </motion.div>
+        )}
 
-          <div className="md:col-span-1">
-            {/* History Sidebar */}
-            <div className="glass rounded-3xl border border-white/10 p-6 h-full flex flex-col">
-              <div className="flex items-center gap-2 mb-6">
-                <Clock className="w-5 h-5 text-text-muted" />
-                <h3 className="font-bold text-text-main">History</h3>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto space-y-3">
-                {history.length === 0 ? (
-                  <p className="text-sm text-text-muted text-center py-8">No YouTube translations yet.</p>
-                ) : (
-                  history.map((item) => (
-                    <div key={item.id} className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-colors group">
-                      <div className="flex items-start justify-between mb-2">
-                        <p className="text-xs text-text-muted truncate max-w-[150px]" title={item.youtube_url}>
-                          {item.youtube_url}
-                        </p>
-                        <button 
-                          onClick={() => handleDelete(item.id)}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400 transition-opacity"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+        {state === 'upload_required' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass rounded-3xl border border-white/10 p-12 mb-6 text-center"
+          >
+            <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-text-main mb-2">Upload Required</h3>
+            <p className="text-text-muted mb-6 max-w-md mx-auto">
+              {error || "This video cannot currently be processed. Please upload the video directly."}
+            </p>
+            <button
+              onClick={handleUploadRedirect}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center gap-2 mx-auto"
+            >
+              <Upload className="w-4 h-4" />
+              Upload Video
+            </button>
+          </motion.div>
+        )}
+
+        {state === 'success' && result && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="glass rounded-3xl border border-white/10 overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
+                    <Languages className="w-5 h-5 text-success" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-text-main">Translation Complete</h3>
+                    <p className="text-xs text-text-muted">Source: {result.source}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">Transcript</p>
+                    <p className="text-sm text-text-main" dir="rtl">{result.transcript}</p>
+                  </div>
+
+                  {result.gloss && result.gloss.length > 0 && (
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <p className="text-xs text-text-muted mb-2 uppercase tracking-wider">Gloss</p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.gloss.map((word, i) => (
+                          <span
+                            key={i}
+                            className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium"
+                          >
+                            {word}
+                          </span>
+                        ))}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[10px] px-2 py-1 rounded-full ${item.status === 'completed' ? 'bg-success/20 text-success' : item.status === 'failed' ? 'bg-red-500/20 text-red-500' : 'bg-primary/20 text-primary'}`}>
-                          {item.status.toUpperCase()}
-                        </span>
-                        <span className="text-[10px] text-text-muted">
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {item.status === 'completed' && (
-                        <button 
-                          onClick={() => loadTranslation(item.id)}
-                          className="w-full mt-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-medium transition-colors"
-                        >
-                          View Translation
-                        </button>
-                      )}
                     </div>
-                  ))
-                )}
+                  )}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleReplay}
+                      className="px-4 py-2 bg-primary/20 text-primary hover:bg-primary/30 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"
+                    >
+                      <Play className="w-4 h-4" /> Play
+                    </button>
+                    <button
+                      onClick={handleReplay}
+                      className="px-4 py-2 bg-white/5 text-text-muted hover:bg-white/10 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"
+                    >
+                      <RotateCcw className="w-4 h-4" /> Replay
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative" style={{ minHeight: '400px' }}>
+                <iframe
+                  ref={unityIframeRef}
+                  src="/unity/index.html"
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                  title="Unity Avatar"
+                  allow="autoplay; fullscreen"
+                />
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {state === 'idle' && (
+          <div className="glass rounded-3xl border border-white/10 p-6">
+            <h3 className="font-bold text-text-main mb-4">How It Works</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { step: 1, icon: <YoutubeIcon className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
+                { step: 2, icon: <Languages className="w-5 h-5" />, title: 'Transcribe & Gloss', desc: 'Arabic transcript is extracted and converted to sign gloss' },
+                { step: 3, icon: <Play className="w-5 h-5" />, title: 'Animate', desc: 'Text is translated to sign language avatar animations' },
+              ].map((item) => (
+                <div key={item.step} className="text-center p-4 rounded-xl bg-white/[0.02]">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 text-primary">
+                    {item.icon}
+                  </div>
+                  <h4 className="font-bold text-text-main text-sm mb-1">Step {item.step}: {item.title}</h4>
+                  <p className="text-[11px] text-text-muted">{item.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
       </motion.div>
     </div>
