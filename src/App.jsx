@@ -26,6 +26,7 @@ import SupervisorDashboard from './pages/SupervisorDashboard';
 import OrganizationAdmin from './pages/OrganizationAdmin';
 import MyContributions from './pages/MyContributions';
 import PaymentCheckout from './pages/PaymentCheckout';
+import SignTranslationPage from './pages/SignTranslationPage';
 
 import { useAuth } from './context/AuthContext';
 
@@ -75,6 +76,14 @@ const AnimatedRoutes = () => {
             element={
               <ProtectedRoute>
                 <Translator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/real-time-translation"
+            element={
+              <ProtectedRoute>
+                <SignTranslationPage />
               </ProtectedRoute>
             }
           />
