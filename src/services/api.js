@@ -199,6 +199,7 @@ export const youtubeService = {
   getTranslation: (id) => api.get(`/youtube/${id}/`),
   deleteTranslation: (id) => api.delete(`/youtube/${id}/`),
   checkTranscript: (videoId) => api.post('/youtube/transcript/', { video_id: videoId }),
+  fetchTranscript: (videoId, language) => api.post('/youtube/transcript/fetch/', { video_id: videoId, ...(language ? { language } : {}) }),
   processTranscript: (data) => api.post('/youtube/process-transcript/', data),
   submitBrowserTranscript: (data) => api.post('/youtube/browser-transcript/', data),
 };

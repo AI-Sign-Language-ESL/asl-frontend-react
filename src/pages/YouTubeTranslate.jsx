@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Languages, Loader2, AlertCircle, Play, RotateCcw, Upload, FileVideo, CheckCircle2, X, FileWarning, ExternalLink, Search, Youtube } from 'lucide-react';
+import { Languages, Loader2, AlertCircle, Play, RotateCcw, Upload, FileVideo, CheckCircle2, X, FileWarning, ExternalLink, Search, Terminal } from 'lucide-react';
 import { youtubeService } from '../services/api';
 import { useYoutubeTranscript } from '../hooks/useYoutubeTranscript';
 import { isValidYoutubeUrl } from '../services/youtubeTranscriptService';
@@ -128,6 +128,21 @@ const YouTubeTranslate = () => {
 
   const handleSubmitToBackend = async () => {
     if (!transcript) return;
+
+    const token = localStorage.getItem('token');
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.tafahom.io (default)';
+    console.log('[YouTubeTranslate] Submitting browser transcript...');
+    console.log('[YouTubeTranslate] API URL:', apiUrl);
+    console.log('[YouTubeTranslate] Authenticated:', !!token);
+    console.log('[YouTubeTranslate] Transcript length:', transcript?.length);
+    console.log('[YouTubeTranslate] Segments:', segments?.length);
+    console.log('[YouTubeTranslate] Video ID:', videoId);
+
+    if (!token) {
+      setError('You must be logged in to translate. Please log in first.');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
@@ -139,6 +154,8 @@ const YouTubeTranslate = () => {
         segments: segments || [],
         language: 'ar',
       });
+
+      console.log('[YouTubeTranslate] Backend response:', response.status, response.data);
 
       const data = response.data;
 
@@ -159,8 +176,22 @@ const YouTubeTranslate = () => {
 
       setTimeout(() => playAnimations(data.animations), 500);
     } catch (err) {
+      console.error('[YouTubeTranslate] Submit error:', err);
+      console.error('[YouTubeTranslate] Response:', err.response?.status, err.response?.data);
+      console.error('[YouTubeTranslate] Network:', err.code, err.message);
       const data = err.response?.data;
-      setError(data?.error || data?.detail || 'Failed to submit transcript. Please try again.');
+      const status = err.response?.status;
+      if (status === 401) {
+        setError('Authentication failed. Please log out and log back in.');
+      } else if (status === 403) {
+        setError(data?.error || data?.detail || 'Your plan does not support this feature. Please upgrade.');
+      } else if (status === 413) {
+        setError('Transcript is too large for the server.');
+      } else if (err.code === 'ERR_NETWORK') {
+        setError('Cannot reach the server. Check if the backend is running and VITE_API_URL is correct.');
+      } else {
+        setError(data?.error || data?.detail || 'Failed to submit transcript. Please try again.');
+      }
       setSubmitting(false);
     }
   };
@@ -328,7 +359,7 @@ const YouTubeTranslate = () => {
             <div className="flex flex-col items-center gap-4">
               <div className="w-12 h-12 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
               <p className="text-text-muted text-lg">Extracting transcript from YouTube...</p>
-              <p className="text-text-muted text-sm">This happens in your browser — no server load.</p>
+              <p className="text-text-muted text-sm">Transcript is fetched server-side for reliability.</p>
             </div>
           </motion.div>
         )}
@@ -360,15 +391,15 @@ const YouTubeTranslate = () => {
           </div>
         )}
 
-        {/* General error message */}
-        {error && (submitState === 'idle' || transcriptState === 'idle') && (
+        {/* Error message — always visible when set */}
+        {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-sm flex items-center gap-2"
+            className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-sm flex items-start gap-2"
           >
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
           </motion.div>
         )}
 
@@ -493,16 +524,6 @@ const YouTubeTranslate = () => {
               </div>
             )}
 
-            {error && !fileError && (
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-sm flex items-center gap-2"
-              >
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
-              </motion.div>
-            )}
           </motion.div>
         )}
 
@@ -702,7 +723,7 @@ const YouTubeTranslate = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { step: 1, icon: <YoutubeIcon className="w-5 h-5" />, title: 'Paste URL', desc: 'Enter a YouTube video URL with Arabic speech' },
-                { step: 2, icon: <Search className="w-5 h-5" />, title: 'Extract Transcript', desc: 'Transcript is extracted directly in your browser — no server needed' },
+                { step: 2, icon: <Search className="w-5 h-5" />, title: 'Extract Transcript', desc: 'Transcript is extracted server-side with automatic fallback' },
                 { step: 3, icon: <Play className="w-5 h-5" />, title: 'Animate', desc: 'Text is translated to sign language avatar animations' },
               ].map((item) => (
                 <div key={item.step} className="text-center p-4 rounded-xl bg-white/[0.02]">

@@ -1,4 +1,4 @@
-const YOUTUBETRANSCRIPT_URL = 'https://youtubetranscript.com';
+import { youtubeService } from './api';
 
 const SUPPORTED_LANGS = ['ar', 'ar-EG', 'en', 'en-US'];
 
@@ -25,59 +25,85 @@ export function isValidYoutubeUrl(url) {
   return extractVideoId(url) !== null;
 }
 
-export async function fetchTranscript(videoId, lang = 'ar') {
-  const url = `${YOUTUBETRANSCRIPT_URL}/?v=${encodeURIComponent(videoId)}&lang=${encodeURIComponent(lang)}`;
+/**
+ * Fetches transcript from the Tafahom backend.
+ * The backend uses youtube-transcript-api server-side and falls back
+ * to yt-dlp + Whisper if captions are unavailable.
+ */
+export async function fetchTranscript(videoId) {
+  try {
+    const response = await youtubeService.fetchTranscript(videoId);
+    const data = response.data;
 
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
+    if (!data.success) {
       throw new TranscriptError(
-        lang === 'ar' ? 'No Arabic transcript available' : 'No transcript available for this language',
+        data.error || 'No transcript available for this video',
+        'TRANSCRIPT_NOT_FOUND'
+      );
+    }
+
+    const segments = (data.segments || []).map((seg, i) => ({
+      start: seg.start ?? 0,
+      duration: seg.duration ?? 0,
+      text: (seg.text || '').replace(/[\s\n\r]+/g, ' ').trim(),
+      index: i,
+    })).filter(s => s.text.length > 0);
+
+    if (segments.length === 0 && !data.transcript) {
+      throw new TranscriptError('Transcript is empty', 'EMPTY_TRANSCRIPT');
+    }
+
+    return {
+      segments,
+      transcript: data.transcript || segments.map(s => s.text).join(' '),
+      source: data.source || 'transcript',
+      duration: data.duration || 0,
+    };
+  } catch (err) {
+    if (err instanceof TranscriptError) throw err;
+    if (err.response?.status === 404) {
+      throw new TranscriptError(
+        'No transcript available for this video',
         'TRANSCRIPT_NOT_FOUND'
       );
     }
     throw new TranscriptError(
-      `Failed to fetch transcript (${response.status})`,
+      err.response?.data?.error || err.message || 'Failed to fetch transcript',
       'FETCH_FAILED'
     );
   }
-
-  const data = await response.json();
-
-  if (!Array.isArray(data) || data.length === 0) {
-    throw new TranscriptError('Transcript is empty', 'EMPTY_TRANSCRIPT');
-  }
-
-  const segments = data.map((seg, i) => ({
-    start: seg.offset ?? 0,
-    duration: seg.duration ?? 0,
-    text: (seg.text || '').replace(/[\s\n\r]+/g, ' ').trim(),
-    index: i,
-  })).filter(s => s.text.length > 0);
-
-  if (segments.length === 0) {
-    throw new TranscriptError('Transcript is empty', 'EMPTY_TRANSCRIPT');
-  }
-
-  return {
-    segments,
-    transcript: segments.map(s => s.text).join(' '),
-  };
 }
 
 export async function fetchTranscriptWithFallback(videoId) {
   let lastError = null;
 
+  // The backend handles language fallback internally,
+  // but we try multiple langs here as a safety net
   for (const lang of SUPPORTED_LANGS) {
     try {
-      return await fetchTranscript(videoId, lang);
+      // The backend endpoint accepts language param
+      const response = await youtubeService.fetchTranscript(videoId, lang);
+      const data = response.data;
+
+      if (data.success) {
+        const segments = (data.segments || []).map((seg, i) => ({
+          start: seg.start ?? 0,
+          duration: seg.duration ?? 0,
+          text: (seg.text || '').replace(/[\s\n\r]+/g, ' ').trim(),
+          index: i,
+        })).filter(s => s.text.length > 0);
+
+        return {
+          segments,
+          transcript: data.transcript || segments.map(s => s.text).join(' '),
+          source: data.source || 'transcript',
+          duration: data.duration || 0,
+        };
+      }
+      lastError = new TranscriptError(data.error || 'No transcript', 'TRANSCRIPT_NOT_FOUND');
     } catch (err) {
-      lastError = err;
-      if (err.code === 'TRANSCRIPT_NOT_FOUND' || err.code === 'EMPTY_TRANSCRIPT') continue;
-      throw err;
+      lastError = err instanceof TranscriptError ? err : new TranscriptError(err.message, 'FETCH_FAILED');
+      if (lastError.code !== 'TRANSCRIPT_NOT_FOUND') throw lastError;
     }
   }
 
