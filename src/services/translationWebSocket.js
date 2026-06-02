@@ -57,16 +57,16 @@ class TranslationWebSocket {
 
         switch (type) {
           case 'translation_started':
-            this._emit('translation_started', data.data);
+            this._emit('translation_started', data);
             break;
           case 'gloss_received':
-            this._emit('gloss_received', data.data);
+            this._emit('gloss_received', data);
             break;
           case 'translation_received':
-            this._emit('translation_received', data.data);
+            this._emit('translation_received', data);
             break;
           case 'translation_error':
-            this._emit('translation_error', data.data);
+            this._emit('translation_error', data);
             break;
           default:
             this._emit('message', data);

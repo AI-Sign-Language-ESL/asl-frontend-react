@@ -9,6 +9,7 @@ const SignTranslationPage = () => {
   const webcamRef = useRef(null);
   const wsRef = useRef(null);
   const frameIntervalRef = useRef(null);
+  const lastSpokenTextRef = useRef('');
 
   const [cameraActive, setCameraActive] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -21,9 +22,14 @@ const SignTranslationPage = () => {
 
   const speak = useCallback((text) => {
     if ('speechSynthesis' in window && text) {
+      if (lastSpokenTextRef.current === text) {
+        return; // Prevent duplicate speech
+      }
+      lastSpokenTextRef.current = text;
+      
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
+      utterance.lang = 'ar-EG';
       utterance.rate = 1;
       utterance.pitch = 1;
       window.speechSynthesis.speak(utterance);

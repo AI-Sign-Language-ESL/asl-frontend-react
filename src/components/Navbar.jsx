@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, LogIn, UserPlus, Sun, Moon, LogOut, User, Menu, X, Home, Languages, Video, Users, Database, CreditCard, Radio } from 'lucide-react';
+import { Settings, LogIn, UserPlus, Sun, Moon, LogOut, User, Menu, X, Home, Languages, Video, Users, Database, CreditCard, Radio, FlaskConical } from 'lucide-react';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
@@ -25,7 +25,7 @@ const Navbar = () => {
   const navLinks = [
     { name: t('navbar.home'), path: '/home', icon: <Home className="w-5 h-5" /> },
     { name: t('navbar.translator'), path: '/translator', icon: <Languages className="w-5 h-5" /> },
-    { name: t('navbar.realtime'), path: '/real-time-translation', icon: <Radio className="w-5 h-5" /> },
+
     { name: t('navbar.generator'), path: '/generator', icon: <Video className="w-5 h-5" /> },
     { name: t('navbar.youtube'), path: '/youtube', icon: <YoutubeIcon className="w-5 h-5" /> },
     { name: t('navbar.meetings'), path: '/meetings', icon: <Users className="w-5 h-5" /> },
@@ -33,6 +33,7 @@ const Navbar = () => {
     ...(user?.role === 'admin' || user?.role === 'supervisor' ? [{ name: 'Admin', path: '/dashboard', icon: <Settings className="w-5 h-5" /> }] : []),
     ...(user?.role === 'organization' ? [{ name: 'Org Admin', path: '/org-admin', icon: <Users className="w-5 h-5" /> }] : []),
     { name: t('navbar.pricing'), path: '/pricing', icon: <CreditCard className="w-5 h-5" /> },
+
   ];
 
   useEffect(() => {

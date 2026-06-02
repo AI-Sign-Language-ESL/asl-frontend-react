@@ -27,6 +27,7 @@ import OrganizationAdmin from './pages/OrganizationAdmin';
 import MyContributions from './pages/MyContributions';
 import PaymentCheckout from './pages/PaymentCheckout';
 import SignTranslationPage from './pages/SignTranslationPage';
+import TestTranslation from './pages/TestTranslation';
 
 import { useAuth } from './context/AuthContext';
 
@@ -168,6 +169,14 @@ const AnimatedRoutes = () => {
             element={
               <ProtectedRoute>
                 <MyContributions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/test-translation"
+            element={
+              <ProtectedRoute>
+                <TestTranslation />
               </ProtectedRoute>
             }
           />

@@ -171,6 +171,7 @@ export const translationService = {
   toSign: (data) => api.post('/translation/to-sign/', data),
   speechToText: (formData) => api.post('/translation/speech-to-text/', formData),
   getSignLanguages: () => api.get('/translation/sign-languages/'),
+  testGloss: (gloss) => api.post('/sign-language/test-gloss/', { gloss }),
 };
 
 export const translatorService = {
