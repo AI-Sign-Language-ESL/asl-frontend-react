@@ -24,7 +24,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: t('navbar.home'), path: '/home', icon: <Home className="w-5 h-5" /> },
-    { name: t('navbar.translator'), path: '/translator', icon: <Languages className="w-5 h-5" /> },
+    { name: t('navbar.realtime'), path: '/real-time-translation', icon: <Languages className="w-5 h-5" /> },
 
     { name: t('navbar.generator'), path: '/generator', icon: <Video className="w-5 h-5" /> },
     { name: t('navbar.youtube'), path: '/youtube', icon: <YoutubeIcon className="w-5 h-5" /> },

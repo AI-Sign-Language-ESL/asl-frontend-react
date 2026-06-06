@@ -9,7 +9,6 @@ import FehmBot from './components/FehmBot';
 
 import Splash from './pages/Splash';
 import Home from './pages/Home';
-import Translator from './pages/Translator';
 import Generator from './pages/Generator';
 import Dataset from './pages/Dataset';
 import Pricing from './pages/Pricing';
@@ -72,14 +71,7 @@ const AnimatedRoutes = () => {
 
         <Route element={<Layout />}>
           <Route path="/home" element={<Home />} />
-          <Route
-            path="/translator"
-            element={
-              <ProtectedRoute>
-                <Translator />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/translator" element={<Navigate to="/real-time-translation" replace />} />
           <Route
             path="/real-time-translation"
             element={

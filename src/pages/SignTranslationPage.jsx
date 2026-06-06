@@ -40,55 +40,44 @@ const SignTranslationPage = () => {
   const startCamera = useCallback(async () => {
     setCameraError('');
     setError('');
-    try {
-      await navigator.mediaDevices.getUserMedia({ video: true });
-      setCameraActive(true);
-      // Give react-webcam a moment to attach the video element
-      setTimeout(() => {
-        if (webcamRef.current?.video) {
-          setVideoEl(webcamRef.current.video);
+    // Activate camera — react-webcam will call getUserMedia internally.
+    // We must NOT call getUserMedia() ourselves first, because that would
+    // lock the camera device (including virtual cameras like OBS/IruinCam)
+    // and cause react-webcam to receive a black stream.
+    setCameraActive(true);
+
+    // Initialize WebSocket immediately (don't wait for video stream)
+    if (!wsRef.current) {
+      wsRef.current = new TranslationWebSocket();
+      
+      wsRef.current.on('gloss_received', (data) => {
+        setGloss(data.gloss);
+        setIsTranslating(true);
+      });
+      
+      wsRef.current.on('translation_received', (data) => {
+        setTranslation(data.text);
+        addToHistory(data.gloss, data.text);
+        speak(data.text);
+        setIsTranslating(false);
+      });
+      
+      wsRef.current.on('translation_error', (data) => {
+        setError(data.message || data.error || 'Translation pipeline error');
+        setIsTranslating(false);
+      });
+
+      let started = false;
+      wsRef.current.on('connected', () => {
+        if (!started) {
+          started = true;
+          wsRef.current.send({ action: "start", output_type: "text" });
         }
-      }, 500);
+      });
 
-      // Initialize WebSocket
-      if (!wsRef.current) {
-        wsRef.current = new TranslationWebSocket();
-        
-        wsRef.current.on('gloss_received', (data) => {
-          setGloss(data.gloss);
-          setIsTranslating(true); // show translating state while waiting for text
-        });
-        
-        wsRef.current.on('translation_received', (data) => {
-          setTranslation(data.text);
-          addToHistory(data.gloss, data.text);
-          speak(data.text);
-          setIsTranslating(false);
-        });
-        
-        wsRef.current.on('translation_error', (data) => {
-          setError(data.error || 'Translation pipeline error');
-          setIsTranslating(false);
-        });
-
-        wsRef.current.connect();
-        // Send a start control message
-        setTimeout(() => {
-          if (wsRef.current) {
-             wsRef.current.send({ action: "start", output_type: "text" });
-          }
-        }, 1000);
-      }
-    } catch (err) {
-      const msg = err.name === 'NotAllowedError'
-        ? 'Camera access denied. Please allow camera permissions.'
-        : err.name === 'NotFoundError'
-          ? 'No camera found on this device.'
-          : `Could not start camera: ${err.message}`;
-      setCameraError(msg);
-      toast.error(msg);
+      wsRef.current.connect();
     }
-  }, []);
+  }, [addToHistory]);
 
   const stopCamera = useCallback(() => {
     setCameraActive(false);
@@ -110,6 +99,28 @@ const SignTranslationPage = () => {
       }, 500);
     }
   }, [clearBuffer]);
+
+  // Called by CameraPreview's Webcam component when the stream is actually ready.
+  // This guarantees videoEl is the live <video> element, not a black placeholder.
+  const handleUserMedia = useCallback(() => {
+    setTimeout(() => {
+      if (webcamRef.current?.video) {
+        setVideoEl(webcamRef.current.video);
+      }
+    }, 100);
+  }, []);
+
+  // Called when the user's browser blocks camera permission.
+  const handleUserMediaError = useCallback((err) => {
+    const msg = err.name === 'NotAllowedError'
+      ? 'Camera access denied. Please allow camera permissions.'
+      : err.name === 'NotFoundError'
+        ? 'No camera found on this device.'
+        : `Could not start camera: ${err.message || err}`;
+    setCameraError(msg);
+    toast.error(msg);
+    setCameraActive(false);
+  }, []);
 
   const sendSequenceToModal = async (sequence) => {
     if (!wsRef.current || !wsRef.current.isConnected) return;
@@ -168,7 +179,9 @@ const SignTranslationPage = () => {
         error={cameraError || error}
         onStart={startCamera}
         onStop={stopCamera}
-        disabled={!mediaPipeReady && cameraActive} // Disable buttons while models load
+        onUserMedia={handleUserMedia}
+        onUserMediaError={handleUserMediaError}
+        disabled={!mediaPipeReady && cameraActive}
       />
 
       <div className="w-full lg:w-[400px] flex flex-col gap-6">

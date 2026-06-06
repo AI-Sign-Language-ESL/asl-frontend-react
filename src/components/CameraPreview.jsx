@@ -1,13 +1,39 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Webcam from 'react-webcam';
-import { Camera } from 'lucide-react';
+import { Camera, ChevronDown } from 'lucide-react';
 import classNames from 'classnames';
 
-const CameraPreview = forwardRef(({ isActive, error, onStart, onStop, disabled }, ref) => {
+const CameraPreview = forwardRef(({ isActive, error, onStart, onStop, onUserMedia, onUserMediaError, disabled }, ref) => {
+  const [devices, setDevices] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+
+  // Enumerate all video input devices so the user can pick their virtual camera
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        // Must request permission first so device labels are visible
+        await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => {});
+        const all = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = all.filter(d => d.kind === 'videoinput');
+        setDevices(videoDevices);
+        if (videoDevices.length > 0 && !selectedDeviceId) {
+          setSelectedDeviceId(videoDevices[0].deviceId);
+        }
+      } catch (e) {
+        // Permission denied — list will be empty
+      }
+    };
+    loadDevices();
+  }, []);
+
+  const videoConstraints = selectedDeviceId
+    ? { deviceId: { exact: selectedDeviceId }, width: 1280, height: 720 }
+    : { width: 1280, height: 720 };
+
   return (
     <div className="flex-1 glass rounded-3xl overflow-hidden flex flex-col relative border border-border-subtle">
-      <div className="p-4 border-b border-border-subtle flex justify-between items-center bg-bg-card/50">
+      <div className="p-4 border-b border-border-subtle flex justify-between items-center bg-bg-card/50 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className={classNames(
             "w-3 h-3 rounded-full shadow-[0_0_10px_currentColor]",
@@ -17,6 +43,26 @@ const CameraPreview = forwardRef(({ isActive, error, onStart, onStop, disabled }
             {isActive ? 'Recording' : 'Camera Off'}
           </span>
         </div>
+
+        {/* Camera device selector — visible when camera is off */}
+        {!isActive && devices.length > 1 && (
+          <div className="relative flex items-center gap-1">
+            <Camera className="w-4 h-4 text-text-muted" />
+            <select
+              value={selectedDeviceId}
+              onChange={e => setSelectedDeviceId(e.target.value)}
+              className="appearance-none bg-bg-card border border-border-subtle text-text-main text-xs rounded-lg px-3 py-1.5 pr-7 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[200px] truncate"
+            >
+              {devices.map(d => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label || `Camera ${d.deviceId.slice(0, 6)}`}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3 h-3 text-text-muted absolute right-2 pointer-events-none" />
+          </div>
+        )}
+
         <button
           onClick={isActive ? onStop : onStart}
           disabled={disabled}
@@ -44,6 +90,9 @@ const CameraPreview = forwardRef(({ isActive, error, onStart, onStop, disabled }
             <Webcam
               ref={ref}
               audio={false}
+              videoConstraints={videoConstraints}
+              onUserMedia={onUserMedia}
+              onUserMediaError={onUserMediaError}
               className="w-full h-full object-cover opacity-80"
               mirrored={true}
             />
