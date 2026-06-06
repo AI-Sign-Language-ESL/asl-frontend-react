@@ -5,7 +5,7 @@
 
   <meta charset="utf-8">
 
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  
 
   <title>Unity Web Player | tafa</title>
 
@@ -130,20 +130,20 @@
     var buildUrl = "Build";
 
     var loaderUrl =
-      buildUrl + "/unity.loader.js";
+      buildUrl + "/New folder.loader.js";
 
     var config = {
 
       arguments: [],
 
       dataUrl:
-        buildUrl + "/unity.data",
+        buildUrl + "/New folder.data.gz",
 
       frameworkUrl:
-        buildUrl + "/unity.framework.js",
+        buildUrl + "/New folder.framework.js.gz",
 
       codeUrl:
-        buildUrl + "/unity.wasm",
+        buildUrl + "/New folder.wasm.gz",
 
       streamingAssetsUrl:
         "StreamingAssets",
@@ -266,6 +266,13 @@
 
         window.unityReady = true;
 
+        if (window.parent) {
+          window.parent.postMessage(
+            { type: "unityReady" },
+            "*"
+          );
+        }
+
         console.log(
           "UNITY INSTANCE READY"
         );
@@ -288,9 +295,15 @@
               !window.unityInstance
             ) {
 
-              console.error(
-                "UNITY INSTANCE NOT READY"
+              console.warn(
+                "UNITY INSTANCE NOT READY — queuing for retry"
               );
+
+              setTimeout(function () {
+                if (window.receiveFlutterText) {
+                  window.receiveFlutterText(text);
+                }
+              }, 1000);
 
               return;
             }

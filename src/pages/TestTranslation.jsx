@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FlaskConical, Loader2, AlertCircle, Volume2, CheckCircle2 } from 'lucide-react';
 import { translationService } from '../services/api';
+import { speak } from '../utils/tts';
 
 const SAMPLE_GLOSS = 'سبب رغبه شراء';
 
@@ -10,17 +11,6 @@ const TestTranslation = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const speak = useCallback((text) => {
-    if ('speechSynthesis' in window && text) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ar-EG';
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      window.speechSynthesis.speak(utterance);
-    }
-  }, []);
 
   const handleTest = useCallback(async () => {
     const trimmed = gloss.trim();

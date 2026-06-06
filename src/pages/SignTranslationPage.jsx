@@ -4,14 +4,15 @@ import CameraPreview from '../components/CameraPreview';
 import TranslationBox from '../components/TranslationBox';
 import TranslationHistory from '../components/TranslationHistory';
 import TranslationWebSocket from '../services/translationWebSocket';
+import { speak, playAudio, cancelSpeech } from '../utils/tts';
 
 const SignTranslationPage = () => {
   const webcamRef = useRef(null);
   const wsRef = useRef(null);
   const frameIntervalRef = useRef(null);
-  const lastSpokenTextRef = useRef('');
 
   const [cameraActive, setCameraActive] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [gloss, setGloss] = useState('');
   const [translation, setTranslation] = useState('');
@@ -19,22 +20,6 @@ const SignTranslationPage = () => {
   const [error, setError] = useState('');
   const [cameraError, setCameraError] = useState('');
   const [isReconnecting, setIsReconnecting] = useState(false);
-
-  const speak = useCallback((text) => {
-    if ('speechSynthesis' in window && text) {
-      if (lastSpokenTextRef.current === text) {
-        return; // Prevent duplicate speech
-      }
-      lastSpokenTextRef.current = text;
-      
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ar-EG';
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      window.speechSynthesis.speak(utterance);
-    }
-  }, []);
 
   const addToHistory = useCallback((glossText, translationText) => {
     setHistory(prev => [
@@ -111,6 +96,10 @@ const SignTranslationPage = () => {
       speak(text);
     });
 
+    const unsubTtsAudio = wsRef.current.on('tts_audio', (data) => {
+      playAudio(data.audio_b64, data.mime_type);
+    });
+
     const unsubError = wsRef.current.on('translation_error', (data) => {
       const msg = data.message || data.detail || 'Translation failed';
       setIsTranslating(false);
@@ -136,6 +125,7 @@ const SignTranslationPage = () => {
       unsubTranslationStarted();
       unsubGlossReceived();
       unsubTranslationReceived();
+      unsubTtsAudio();
       unsubError();
       unsubSocketError();
       wsRef.current?.disconnect();

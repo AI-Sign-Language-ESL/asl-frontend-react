@@ -3,6 +3,7 @@ import { Send, Loader2, AlertCircle, Mic, MicOff, Gamepad2 } from 'lucide-react'
 import { motion } from 'framer-motion';
 import { unityService } from '../services/api';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { useUnity } from '../hooks/useUnity';
 import classNames from 'classnames';
 
 const Generator = () => {
@@ -18,6 +19,8 @@ const Generator = () => {
   const speechTranscriptRef = useRef("");
   const unityIframeRef = useRef(null);
   const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const { unityReady, sendMessage } = useUnity(unityIframeRef);
 
   const handleUnityGenerate = async () => {
     if (!inputText.trim()) return;
@@ -37,17 +40,6 @@ const Generator = () => {
       );
 
       // =====================================
-      // CHECK UNITY & SYNC
-      // =====================================
-
-      const unityWindow =
-        unityIframeRef.current?.contentWindow;
-
-      if (unityWindow && unityWindow.unityInstance) {
-        window.unityInstance = unityWindow.unityInstance;
-      }
-
-      // =====================================
       // SEND ANIMATIONS TO UNITY
       // =====================================
 
@@ -58,27 +50,18 @@ const Generator = () => {
         setUnityAnimations(data.animations);
         setUnitySource(data.source || 'django');
 
-        if (window.unityInstance)
-        {
-            console.log(
-                "SENDING TO UNITY:",
-                data.animations
-            );
+        console.log(
+            "Unity Ready:", unityReady,
+            "Sending message:", data.animations
+        );
 
-            window.unityInstance.SendMessage(
-                "tpose",
-                "ReceiveAnimations",
-                JSON.stringify(
-                    data.animations
-                )
-            );
-        }
-        else
-        {
-            console.error(
-                "UNITY INSTANCE NOT READY"
-            );
-        }
+        sendMessage(
+            "tpose",
+            "ReceiveAnimations",
+            JSON.stringify(
+                data.animations
+            )
+        );
       }
 
     } catch (err) {

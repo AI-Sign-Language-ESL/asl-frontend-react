@@ -259,30 +259,6 @@ export const healthService = {
 };
 
 // =========================
-// WEBSOCKET - Translation Stream
-// =========================
-let ws = null;
-
-export const wsService = {
-  connect: (onMessage) => {
-    const token = localStorage.getItem('token');
-    ws = new WebSocket(`${WS_URL}/ws/translation/stream?token=${token}`);
-
-    ws.onmessage = (event) => {
-      onMessage(JSON.parse(event.data));
-    };
-  },
-  send: (data) => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(data));
-    }
-  },
-  disconnect: () => {
-    ws?.close();
-  },
-};
-
-// =========================
 // WEBSOCKET - Meeting
 // =========================
 let meetingWs = null;

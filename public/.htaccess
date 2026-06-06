@@ -1,44 +1,57 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
+
   # 1. SPA React Routing (Bypass Unity Assets)
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteCond %{REQUEST_URI} !\.(wasm|js|css|data|unityweb|json|png|jpg|jpeg|gif|ico|svg)$ [NC]
+  RewriteCond %{REQUEST_URI} !\.(wasm|wasm\.gz|js|js\.gz|css|data|data\.gz|unityweb|json|png|jpg|jpeg|gif|ico|svg)$ [NC]
   RewriteRule . /index.html [L]
 </IfModule>
 
-# 2. Tell Hostinger these are pre-gzipped files
+# 2. MIME types for Unity WebGL
 <IfModule mod_mime.c>
   AddEncoding gzip .gz
   AddType application/wasm         .wasm
-  AddType application/wasm         .wasm.gz
-  AddType application/javascript   .js.gz
-  AddType application/octet-stream .data.gz
+  AddType application/javascript   .js
 </IfModule>
 
-# 3. Prevent Hostinger from double-compressing the files
+# 3. Prevent double-compression of pre-gzipped Unity files
 <IfModule mod_deflate.c>
   SetEnvIfNoCase Request_URI \.gz$ no-gzip dont-vary
 </IfModule>
 
-# 4. Fix Wasm Streaming Abort Bug in Chrome/Safari
+# 4. Headers for pre-compressed Unity assets
 <IfModule mod_headers.c>
   <FilesMatch "\.wasm\.gz$">
     Header set Content-Type "application/wasm"
     Header set Content-Encoding "gzip"
-    Header unset Content-Length
+    Header append Cache-Control "no-transform"
+    Header append Cache-Control "public"
+    Header append Cache-Control "immutable"
   </FilesMatch>
+
   <FilesMatch "\.framework\.js\.gz$">
     Header set Content-Type "application/javascript"
     Header set Content-Encoding "gzip"
-    Header unset Content-Length
+    Header append Cache-Control "no-transform"
+    Header append Cache-Control "public"
+    Header append Cache-Control "immutable"
   </FilesMatch>
+
   <FilesMatch "\.data\.gz$">
     Header set Content-Type "application/octet-stream"
     Header set Content-Encoding "gzip"
-    Header unset Content-Length
+    Header append Cache-Control "no-transform"
+    Header append Cache-Control "public"
+    Header append Cache-Control "immutable"
+  </FilesMatch>
+
+  <FilesMatch "\.loader\.js$">
+    Header set Content-Type "application/javascript"
+    Header append Cache-Control "no-transform"
+    Header append Cache-Control "public"
+    Header append Cache-Control "immutable"
   </FilesMatch>
 </IfModule>

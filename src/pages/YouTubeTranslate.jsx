@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Languages, Loader2, AlertCircle, Play, RotateCcw, Upload, FileVideo, CheckCircle2, X, FileWarning, ExternalLink, Search, Terminal } from 'lucide-react';
 import { youtubeService } from '../services/api';
 import { useYoutubeTranscript } from '../hooks/useYoutubeTranscript';
+import { useUnity } from '../hooks/useUnity';
 import { isValidYoutubeUrl } from '../services/youtubeTranscriptService';
 import TranscriptPreview from '../components/TranscriptPreview';
 import TranscriptErrorBoundary from '../components/TranscriptErrorBoundary';
@@ -45,6 +46,8 @@ const YouTubeTranslate = () => {
 
   const unityIframeRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const { unityReady, sendMessage } = useUnity(unityIframeRef);
 
   const {
     state: transcriptState,
@@ -207,15 +210,8 @@ const YouTubeTranslate = () => {
 
   const playAnimations = (animations) => {
     if (!animations || animations.length === 0) return;
-    const unityWindow = unityIframeRef.current?.contentWindow;
-    if (unityWindow && unityWindow.unityInstance) {
-      window.unityInstance = unityWindow.unityInstance;
-    }
-    if (window.unityInstance) {
-      window.unityInstance.SendMessage("tpose", "ReceiveAnimations", JSON.stringify(animations));
-    } else {
-      setTimeout(() => playAnimations(animations), 500);
-    }
+    console.log("Unity Ready:", unityReady, "Sending message:", animations);
+    sendMessage("tpose", "ReceiveAnimations", JSON.stringify(animations));
   };
 
   const handleReplay = () => {
