@@ -1,22 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FilesetResolver, HolisticLandmarker } from '@mediapipe/tasks-vision';
-// Wait, HolisticLandmarker is in @mediapipe/tasks-vision?
-// As of recent versions, it's PoseLandmarker, HandLandmarker, FaceLandmarker. 
-// Or maybe we use Holistic if available.
-// If not, we can just use PoseLandmarker and HandLandmarker.
-// Actually, let's look at what the API expects. If we can't know, let's extract Pose and Hand, and combine them. 
-// However, the standard is often 21 hand landmarks + 6 pose landmarks (wrist, elbow, shoulder for left and right arm).
-// Pose landmarks indices: 
-// 11: left shoulder, 12: right shoulder
-// 13: left elbow, 14: right elbow
-// 15: left wrist, 16: right wrist
-// That's exactly 6!
-// 6 + 21 (right hand) = 27 landmarks!
-// So it expects 6 pose landmarks and 21 hand landmarks.
-
-// Let's implement this!
-
-import { PoseLandmarker, HandLandmarker } from '@mediapipe/tasks-vision';
+import { FilesetResolver, PoseLandmarker, HandLandmarker } from '@mediapipe/tasks-vision';
 
 export const useMediaPipe = (videoElement) => {
     const [isReady, setIsReady] = useState(false);
@@ -24,7 +7,7 @@ export const useMediaPipe = (videoElement) => {
     const poseLandmarkerRef = useRef(null);
     const handLandmarkerRef = useRef(null);
     
-    // Sequence buffer: stores up to 96 frames
+    // Sequence buffer: stores up to 96 frames for sliding window
     const sequenceBuffer = useRef([]);
 
     useEffect(() => {
@@ -85,49 +68,61 @@ export const useMediaPipe = (videoElement) => {
             const poseResult = poseLandmarkerRef.current.detectForVideo(videoElement, timestamp);
             const handResult = handLandmarkerRef.current.detectForVideo(videoElement, timestamp);
 
-            // Extract 6 pose landmarks (11 to 16)
-            let poseLandmarks = new Array(6).fill([0, 0, 0]);
+            // Extract exactly 7 pose landmarks: Nose(0), L_Eye(2), R_Eye(5), L_Shoulder(11), R_Shoulder(12), L_Elbow(13), R_Elbow(14)
+            let poseLandmarks = new Array(7).fill([0, 0, 0]);
             if (poseResult.landmarks && poseResult.landmarks.length > 0) {
                 const pose = poseResult.landmarks[0];
                 poseLandmarks = [
+                    [pose[0].x, pose[0].y, pose[0].z || 0],
+                    [pose[2].x, pose[2].y, pose[2].z || 0],
+                    [pose[5].x, pose[5].y, pose[5].z || 0],
                     [pose[11].x, pose[11].y, pose[11].z || 0],
                     [pose[12].x, pose[12].y, pose[12].z || 0],
                     [pose[13].x, pose[13].y, pose[13].z || 0],
-                    [pose[14].x, pose[14].y, pose[14].z || 0],
-                    [pose[15].x, pose[15].y, pose[15].z || 0],
-                    [pose[16].x, pose[16].y, pose[16].z || 0]
+                    [pose[14].x, pose[14].y, pose[14].z || 0]
                 ];
             }
 
-            // Extract 21 hand landmarks (prefer right hand, fallback to left, then zeros)
-            let handLandmarks = new Array(21).fill([0, 0, 0]);
+            // Extract exactly 10 hand landmarks: Wrist(0), ThumbTip(4), IndexMCP(5), IndexTip(8), MiddleMCP(9), MiddleTip(12), RingMCP(13), RingTip(16), PinkyMCP(17), PinkyTip(20)
+            const getHand10 = (hand) => [
+                [hand[0].x, hand[0].y, hand[0].z || 0],
+                [hand[4].x, hand[4].y, hand[4].z || 0],
+                [hand[5].x, hand[5].y, hand[5].z || 0],
+                [hand[8].x, hand[8].y, hand[8].z || 0],
+                [hand[9].x, hand[9].y, hand[9].z || 0],
+                [hand[12].x, hand[12].y, hand[12].z || 0],
+                [hand[13].x, hand[13].y, hand[13].z || 0],
+                [hand[16].x, hand[16].y, hand[16].z || 0],
+                [hand[17].x, hand[17].y, hand[17].z || 0],
+                [hand[20].x, hand[20].y, hand[20].z || 0]
+            ];
+
+            let leftHandLandmarks = new Array(10).fill([0, 0, 0]);
+            let rightHandLandmarks = new Array(10).fill([0, 0, 0]);
+
             if (handResult.landmarks && handResult.landmarks.length > 0) {
-                // Find right hand if possible
-                let targetHand = handResult.landmarks[0];
-                if (handResult.handednesses && handResult.handednesses.length > 1) {
-                    const rightHandIndex = handResult.handednesses.findIndex(h => h[0].categoryName === "Right");
-                    if (rightHandIndex !== -1) {
-                        targetHand = handResult.landmarks[rightHandIndex];
-                    }
-                }
-                
-                handLandmarks = targetHand.map(l => [l.x, l.y, l.z || 0]);
+                handResult.handednesses.forEach((handedness, index) => {
+                    // MediaPipe flips handedness by default (Left is Right), but we map by categoryName safely
+                    const isLeft = handedness[0].categoryName === "Left";
+                    const isRight = handedness[0].categoryName === "Right";
+                    if (isLeft) leftHandLandmarks = getHand10(handResult.landmarks[index]);
+                    if (isRight) rightHandLandmarks = getHand10(handResult.landmarks[index]);
+                });
             }
 
-            // Combine exactly 27 landmarks
-            const combinedFrame = [...poseLandmarks, ...handLandmarks];
+            // Combine exactly 27 landmarks (7 Pose + 10 Left + 10 Right)
+            const combinedFrame = [...poseLandmarks, ...leftHandLandmarks, ...rightHandLandmarks];
             
-            // Add to buffer
+            // Sliding Window: push to buffer
             sequenceBuffer.current.push(combinedFrame);
             
-            // Keep only last 96 frames
+            // Keep strictly the last 96 frames
             if (sequenceBuffer.current.length > 96) {
                 sequenceBuffer.current.shift();
             }
 
-            // If we have 96 frames exactly, we can return the sequence
+            // Return the sequence if we have exactly 96 frames
             if (sequenceBuffer.current.length === 96) {
-                // Return a copy of the sequence
                 return [...sequenceBuffer.current];
             }
             
