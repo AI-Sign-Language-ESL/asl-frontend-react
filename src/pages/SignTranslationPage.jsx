@@ -10,11 +10,18 @@ import TranslationWebSocket from '../services/translationWebSocket';
 const SignTranslationPage = () => {
   const webcamRef = useRef(null);
   const animationFrameRef = useRef(null);
-  const framesSinceLastPredict = useRef(15);
+  const framesSinceLastPredict = useRef(0); // start at 0 — wait for WS to be ready first
+  const lastFrameTimeRef = useRef(0);
+  const isAwaitingPredictionRef = useRef(false);
+  const heartbeatIntervalRef = useRef(null);
+  const TARGET_FPS = 30; // IMPORTANT: Must match the FPS used during model training
+  const FRAME_INTERVAL = 1000 / TARGET_FPS;
+
   const [videoEl, setVideoEl] = useState(null);
 
-  const [cameraActive, setCameraActive] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
+  const [cameraState, setCameraState] = useState('off'); // 'off', 'ready', 'collecting', 'predicting', 'active', 'stopped'
+  const isTranslationActiveRef = useRef(false);
+
   const [gloss, setGloss] = useState('');
   const [translation, setTranslation] = useState('');
   const [history, setHistory] = useState([]);
@@ -37,68 +44,121 @@ const SignTranslationPage = () => {
     ].slice(0, 50));
   }, []);
 
-  const startCamera = useCallback(async () => {
-    setCameraError('');
-    setError('');
-    // Activate camera — react-webcam will call getUserMedia internally.
-    // We must NOT call getUserMedia() ourselves first, because that would
-    // lock the camera device (including virtual cameras like OBS/IruinCam)
-    // and cause react-webcam to receive a black stream.
-    setCameraActive(true);
+  const toggleCamera = useCallback(async () => {
+    if (cameraState !== 'off') {
+      // Close Camera
+      setCameraState('off');
+      isTranslationActiveRef.current = false;
+      setVideoEl(null);
+      setGloss('');
+      setTranslation('');
+      setHistory([]);
+      setError('');
+      setCameraError('');
+      isAwaitingPredictionRef.current = false;
+      framesSinceLastPredict.current = 0;
+      clearBuffer();
 
-    // Initialize WebSocket immediately (don't wait for video stream)
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      if (wsRef.current) {
+        wsRef.current.disconnect();
+        wsRef.current = null;
+      }
+    } else {
+      // Open Camera
+      setCameraError('');
+      setError('');
+      setCameraState('ready');
+      isTranslationActiveRef.current = false;
+    }
+  }, [cameraState, clearBuffer]);
+
+  const startTranslation = useCallback(() => {
+    setGloss('');
+    setTranslation('');
+    setHistory([]);
+    setCameraState('collecting');
+    isTranslationActiveRef.current = true;
+    clearBuffer();
+
     if (!wsRef.current) {
       wsRef.current = new TranslationWebSocket();
       
       wsRef.current.on('gloss_received', (data) => {
         setGloss(data.gloss);
-        setIsTranslating(true);
       });
       
       wsRef.current.on('translation_received', (data) => {
-        setTranslation(data.text);
-        addToHistory(data.gloss, data.text);
-        speak(data.text);
-        setIsTranslating(false);
+        if (data.gloss === 'NO_SIGN') {
+          setTranslation('No Sign Detected');
+          setGloss('');
+        } else {
+          setTranslation(data.text);
+          addToHistory(data.gloss, data.text);
+          speak(data.text);
+        }
+        clearBuffer();
+        framesSinceLastPredict.current = 0;
+        isAwaitingPredictionRef.current = false;
+        setCameraState(prev => (prev !== 'off' && prev !== 'stopped') ? 'collecting' : prev);
       });
       
       wsRef.current.on('translation_error', (data) => {
         setError(data.message || data.error || 'Translation pipeline error');
-        setIsTranslating(false);
+        clearBuffer();
+        framesSinceLastPredict.current = 0;
+        isAwaitingPredictionRef.current = false;
+        setCameraState(prev => (prev !== 'off' && prev !== 'stopped') ? 'collecting' : prev);
       });
 
-      let started = false;
+      const wsSentStartRef = { current: false };
+
       wsRef.current.on('connected', () => {
-        if (!started) {
-          started = true;
-          wsRef.current.send({ action: "start", output_type: "text" });
+        wsSentStartRef.current = true;
+        isAwaitingPredictionRef.current = false;
+        framesSinceLastPredict.current = 0;
+        wsRef.current.send({ action: "start", output_type: "text" });
+
+        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = setInterval(() => {
+          if (wsRef.current?.isConnected) {
+            wsRef.current.send({ type: 'ping' });
+          }
+        }, 20000);
+      });
+
+      wsRef.current.on('disconnected', () => {
+        isAwaitingPredictionRef.current = false;
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
         }
       });
 
       wsRef.current.connect();
     }
-  }, [addToHistory]);
+  }, [addToHistory, clearBuffer]);
 
-  const stopCamera = useCallback(() => {
-    setCameraActive(false);
-    setVideoEl(null);
-    setGloss('');
-    setTranslation('');
-    setError('');
-    setIsTranslating(false);
+  const stopTranslation = useCallback(() => {
+    setCameraState('stopped');
+    isTranslationActiveRef.current = false;
+    isAwaitingPredictionRef.current = false;
     framesSinceLastPredict.current = 0;
-    clearBuffer();
+
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
 
     if (wsRef.current) {
       wsRef.current.send({ action: "stop" });
-      setTimeout(() => {
-        if (wsRef.current) {
-          wsRef.current.disconnect();
-          wsRef.current = null;
-        }
-      }, 500);
+      wsRef.current.disconnect();
+      wsRef.current = null;
     }
-  }, [clearBuffer]);
+  }, []);
 
   // Called by CameraPreview's Webcam component when the stream is actually ready.
   // This guarantees videoEl is the live <video> element, not a black placeholder.
@@ -119,11 +179,32 @@ const SignTranslationPage = () => {
         : `Could not start camera: ${err.message || err}`;
     setCameraError(msg);
     toast.error(msg);
-    setCameraActive(false);
+    setCameraState('error');
   }, []);
 
   const sendSequenceToModal = async (sequence) => {
     if (!wsRef.current || !wsRef.current.isConnected) return;
+
+    // --- Frontend diagnostic: log sequence stats before transmission ---
+    // Compare these numbers with the backend's sequence_diagnostic log.
+    // If they match, the data is correct at source. If backend numbers differ,
+    // the data is corrupted in transit (JSON serialization issue, packet loss).
+    if (process.env.NODE_ENV !== 'production') {
+      const flat = sequence.flat(2);
+      const nonZero = flat.filter(v => v !== 0).length;
+      const mean = flat.reduce((a, b) => a + b, 0) / flat.length;
+      const std = Math.sqrt(flat.reduce((a, b) => a + (b - mean) ** 2, 0) / flat.length);
+      const frameZeros = sequence.filter(frame =>
+        frame.every(landmark => landmark.every(v => v === 0))
+      ).length;
+      console.info(
+        '[sendSeq] shape=(%d,27,3) | zero_frames=%d | non_zero=%d | mean=%.4f | std=%.4f',
+        sequence.length, frameZeros, nonZero, mean, std
+      );
+      // Expected (healthy detection): zero_frames < 20, mean ≈ 0.3-0.6, std ≈ 0.1-0.3
+      // Problem signs: zero_frames > 50 → MediaPipe not detecting
+      //                mean ≈ 0, std ≈ 0  → all-zero input, model will output dominant class
+    }
     
     wsRef.current.send({
       action: "landmarks",
@@ -132,26 +213,37 @@ const SignTranslationPage = () => {
   };
 
   const captureLoop = useCallback(() => {
-    if (!cameraActive || !videoEl || !mediaPipeReady) {
+    const isCameraActive = videoEl && mediaPipeReady; // Don't rely on cameraState closure
+    if (!isCameraActive) {
       return;
     }
 
     const timestamp = performance.now();
-    const sequence = processFrame(timestamp);
+    
+    if (timestamp - lastFrameTimeRef.current < FRAME_INTERVAL) {
+      animationFrameRef.current = requestAnimationFrame(captureLoop);
+      return;
+    }
+    lastFrameTimeRef.current = timestamp;
 
-    // If processFrame returns a sequence array of length 96, it's ready
-    if (sequence && sequence.length === 96) {
-      framesSinceLastPredict.current += 1;
-      
-      // Predict immediately on the first full buffer, or every 15 frames thereafter
-      if (framesSinceLastPredict.current >= 15) {
-        framesSinceLastPredict.current = 0;
-        sendSequenceToModal(sequence);
+    const result = processFrame(timestamp);
+    
+    if (result && isTranslationActiveRef.current) {
+      const { sequence, length } = result;
+
+      if (length < 96) {
+        setCameraState(prev => (prev !== 'off' && prev !== 'collecting') ? 'collecting' : prev);
+      } else if (sequence && sequence.length === 96) {
+        if (!isAwaitingPredictionRef.current) {
+          isAwaitingPredictionRef.current = true;
+          setCameraState(prev => (prev !== 'off' && prev !== 'stopped') ? 'predicting' : prev);
+          sendSequenceToModal(sequence);
+        }
       }
     }
 
     animationFrameRef.current = requestAnimationFrame(captureLoop);
-  }, [cameraActive, videoEl, mediaPipeReady, processFrame, isTranslating]);
+  }, [videoEl, mediaPipeReady, processFrame, FRAME_INTERVAL]);
 
   useEffect(() => {
     if (mediaPipeError) {
@@ -161,7 +253,7 @@ const SignTranslationPage = () => {
   }, [mediaPipeError]);
 
   useEffect(() => {
-    if (cameraActive && videoEl && mediaPipeReady) {
+    if (cameraState !== 'off' && videoEl && mediaPipeReady) {
       animationFrameRef.current = requestAnimationFrame(captureLoop);
     }
     return () => {
@@ -169,38 +261,33 @@ const SignTranslationPage = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [cameraActive, videoEl, mediaPipeReady, captureLoop]);
+  }, [cameraState, videoEl, mediaPipeReady, captureLoop]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] gap-6 lg:flex-row pb-6">
       <CameraPreview
         ref={webcamRef}
-        isActive={cameraActive}
+        cameraState={cameraState}
         error={cameraError || error}
-        onStart={startCamera}
-        onStop={stopCamera}
+        onToggleCamera={toggleCamera}
+        onStartTranslation={startTranslation}
+        onStopTranslation={stopTranslation}
         onUserMedia={handleUserMedia}
         onUserMediaError={handleUserMediaError}
-        disabled={!mediaPipeReady && cameraActive}
+        disabled={!mediaPipeReady && cameraState !== 'off'}
       />
 
       <div className="w-full lg:w-[400px] flex flex-col gap-6">
-        {!mediaPipeReady && cameraActive && !mediaPipeError && (
+        {!mediaPipeReady && cameraState !== 'off' && !mediaPipeError && (
           <div className="text-xs text-blue-500 text-center bg-blue-500/10 py-1.5 px-3 rounded-full animate-pulse">
             Loading AI Models...
-          </div>
-        )}
-
-        {isTranslating && (
-          <div className="text-xs text-amber-500 text-center bg-amber-500/10 py-1.5 px-3 rounded-full animate-pulse">
-            Predicting sequence...
           </div>
         )}
 
         <TranslationBox
           gloss={gloss}
           translation={translation}
-          isTranslating={isTranslating}
+          isTranslating={cameraState === 'predicting'}
           error={error}
           onSpeak={speak}
         />

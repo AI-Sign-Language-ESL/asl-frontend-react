@@ -4,7 +4,16 @@ import Webcam from 'react-webcam';
 import { Camera, ChevronDown } from 'lucide-react';
 import classNames from 'classnames';
 
-const CameraPreview = forwardRef(({ isActive, error, onStart, onStop, onUserMedia, onUserMediaError, disabled }, ref) => {
+const CameraPreview = forwardRef(({ 
+  cameraState, // 'off', 'ready', 'collecting', 'predicting', 'active', 'stopped'
+  error, 
+  onToggleCamera, 
+  onStartTranslation,
+  onStopTranslation,
+  onUserMedia, 
+  onUserMediaError, 
+  disabled 
+}, ref) => {
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
@@ -31,16 +40,34 @@ const CameraPreview = forwardRef(({ isActive, error, onStart, onStop, onUserMedi
     ? { deviceId: { exact: selectedDeviceId }, width: 1280, height: 720 }
     : { width: 1280, height: 720 };
 
+  const isActive = cameraState !== 'off';
+  const isTranslationActive = ['collecting', 'predicting', 'active'].includes(cameraState);
+
+  const getStatusDisplay = () => {
+    switch (cameraState) {
+      case 'ready': return { text: 'Camera Ready', color: 'text-success', bg: 'bg-success', pulse: false };
+      case 'collecting': return { text: 'Collecting next sign...', color: 'text-blue-500', bg: 'bg-blue-500', pulse: true };
+      case 'predicting': return { text: 'Predicting...', color: 'text-amber-500', bg: 'bg-amber-500', pulse: true };
+      case 'active': return { text: 'Translation Active', color: 'text-success', bg: 'bg-success', pulse: false };
+      case 'stopped': return { text: 'Translation Stopped', color: 'text-red-500', bg: 'bg-red-500', pulse: false };
+      default: return { text: 'Camera Off', color: 'text-text-muted', bg: 'bg-text-muted', pulse: false };
+    }
+  };
+
+  const status = getStatusDisplay();
+
   return (
     <div className="flex-1 glass rounded-3xl overflow-hidden flex flex-col relative border border-border-subtle">
       <div className="p-4 border-b border-border-subtle flex justify-between items-center bg-bg-card/50 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className={classNames(
             "w-3 h-3 rounded-full shadow-[0_0_10px_currentColor]",
-            isActive ? "bg-success text-success animate-pulse" : "bg-text-muted text-text-muted"
+            status.bg,
+            status.color,
+            status.pulse && "animate-pulse"
           )} />
-          <span className="font-semibold text-sm tracking-wide text-text-main">
-            {isActive ? 'Recording' : 'Camera Off'}
+          <span className={classNames("font-semibold text-sm tracking-wide", status.color)}>
+            {status.text}
           </span>
         </div>
 
@@ -63,19 +90,56 @@ const CameraPreview = forwardRef(({ isActive, error, onStart, onStop, onUserMedi
           </div>
         )}
 
-        <button
-          onClick={isActive ? onStop : onStart}
-          disabled={disabled}
-          className={classNames(
-            "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all",
-            disabled && "opacity-50 cursor-not-allowed",
-            isActive
-              ? "bg-red-500/20 text-red-500 hover:bg-red-500/30"
-              : "bg-primary text-white hover:bg-secondary shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+        <div className="flex items-center gap-2">
+          {isActive ? (
+            <>
+              {isTranslationActive ? (
+                <button
+                  onClick={onStopTranslation}
+                  disabled={disabled}
+                  className={classNames(
+                    "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all bg-red-500/20 text-red-500 hover:bg-red-500/30",
+                    disabled && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  Stop Translation
+                </button>
+              ) : (
+                <button
+                  onClick={onStartTranslation}
+                  disabled={disabled}
+                  className={classNames(
+                    "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all bg-success text-white hover:bg-success/90 shadow-[0_0_15px_rgba(34,197,94,0.3)]",
+                    disabled && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  Start Translation
+                </button>
+              )}
+              <button
+                onClick={onToggleCamera}
+                disabled={disabled}
+                className={classNames(
+                  "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all border border-border-subtle text-text-muted hover:text-text-main hover:bg-bg-card",
+                  disabled && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                Close Camera
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onToggleCamera}
+              disabled={disabled}
+              className={classNames(
+                "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all bg-primary text-white hover:bg-secondary shadow-[0_0_15px_rgba(59,130,246,0.3)]",
+                disabled && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              Open Camera
+            </button>
           )}
-        >
-          {isActive ? 'Stop' : 'Start'}
-        </button>
+        </div>
       </div>
 
       <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
