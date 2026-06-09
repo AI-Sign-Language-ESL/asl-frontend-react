@@ -26,6 +26,7 @@ import OrganizationAdmin from './pages/OrganizationAdmin';
 import MyContributions from './pages/MyContributions';
 import PaymentCheckout from './pages/PaymentCheckout';
 import SignTranslationPage from './pages/SignTranslationPage';
+import HttpTranslationPage from './pages/HttpTranslationPage';
 import TestTranslation from './pages/TestTranslation';
 
 import { useAuth } from './context/AuthContext';
@@ -77,6 +78,14 @@ const AnimatedRoutes = () => {
             element={
               <ProtectedRoute>
                 <SignTranslationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/http-translation"
+            element={
+              <ProtectedRoute>
+                <HttpTranslationPage />
               </ProtectedRoute>
             }
           />

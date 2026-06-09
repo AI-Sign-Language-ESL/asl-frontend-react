@@ -46,7 +46,7 @@ const CameraPreview = forwardRef(({
   const getStatusDisplay = () => {
     switch (cameraState) {
       case 'ready': return { text: 'Camera Ready', color: 'text-success', bg: 'bg-success', pulse: false };
-      case 'collecting': return { text: 'Collecting next sign...', color: 'text-blue-500', bg: 'bg-blue-500', pulse: true };
+      case 'collecting': return { text: 'Collecting sign...', color: 'text-blue-500', bg: 'bg-blue-500', pulse: true };
       case 'predicting': return { text: 'Predicting...', color: 'text-amber-500', bg: 'bg-amber-500', pulse: true };
       case 'active': return { text: 'Translation Active', color: 'text-success', bg: 'bg-success', pulse: false };
       case 'stopped': return { text: 'Translation Stopped', color: 'text-red-500', bg: 'bg-red-500', pulse: false };
