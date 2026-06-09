@@ -74,7 +74,6 @@ const HttpTranslationPage = () => {
   const startTranslation = useCallback(() => {
     setGloss('');
     setTranslation('');
-    setHistory([]);
     setCameraState('collecting');
     setFrameCount(0);
     isTranslationActiveRef.current = true;
@@ -83,12 +82,44 @@ const HttpTranslationPage = () => {
     clearBuffer();
   }, [clearBuffer]);
 
-  const stopTranslation = useCallback(() => {
+  const stopTranslation = useCallback(async () => {
     setCameraState('stopped');
     isTranslationActiveRef.current = false;
     isAwaitingPredictionRef.current = false;
     setFrameCount(0);
-  }, []);
+    
+    // Process the accumulated gloss session
+    setGloss(currentGloss => {
+      if (!currentGloss) return currentGloss;
+      
+      const words = currentGloss.split(' ').filter(w => w.trim());
+      
+      if (words.length === 1) {
+        setTranslation(currentGloss);
+        addToHistory(currentGloss, currentGloss, null, null);
+        speak(currentGloss);
+      } else if (words.length >= 2) {
+        setCameraState('predicting');
+        translationService.translateGloss(currentGloss)
+          .then(res => {
+            const naturalSentence = res.data.text || currentGloss;
+            setTranslation(naturalSentence);
+            addToHistory(currentGloss, naturalSentence, null, null);
+            speak(naturalSentence);
+          })
+          .catch(err => {
+            console.error("NLP error:", err);
+            toast.error("Failed to translate to natural sentence.");
+            setTranslation(currentGloss); // fallback
+            addToHistory(currentGloss, currentGloss, null, null);
+          })
+          .finally(() => {
+            setCameraState('stopped');
+          });
+      }
+      return currentGloss;
+    });
+  }, [addToHistory]);
 
   const clearTranslation = useCallback(() => {
     setTranslation('');
@@ -121,12 +152,8 @@ const HttpTranslationPage = () => {
     if (!isTranslationActiveRef.current) return;
 
     try {
-      const startTime = performance.now();
       const response = await translationService.predictModal(sequence);
-      const endTime = performance.now();
-      const latency = Math.round(endTime - startTime);
-
-      const { prediction, confidence, translation: predictedTranslation } = response.data;
+      const { prediction, confidence } = response.data;
 
       // Duplicate prevention logic
       const isDuplicate = lastPredictionRef.current === prediction;
@@ -134,14 +161,8 @@ const HttpTranslationPage = () => {
         toast(`Ignored duplicate low-confidence prediction: ${prediction}`, { icon: '⚠️' });
       } else {
         if (prediction && prediction !== 'NO_SIGN') {
-          setTranslation(prev => prev ? `${prev} ${predictedTranslation}` : predictedTranslation);
-          setGloss(prediction);
+          setGloss(prev => prev ? `${prev} ${prediction}` : prediction);
           lastPredictionRef.current = prediction;
-          
-          addToHistory(prediction, predictedTranslation, confidence, latency);
-          speak(predictedTranslation);
-        } else {
-          setGloss('NO_SIGN');
         }
       }
     } catch (err) {

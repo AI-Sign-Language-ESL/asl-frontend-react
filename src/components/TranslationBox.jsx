@@ -28,7 +28,7 @@ const TranslationBox = ({ gloss, translation, isTranslating, error, onSpeak }) =
 
         {hasGloss && (
           <div>
-            <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Gloss</span>
+            <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Gloss Sentence</span>
             <AnimatePresence mode="wait">
               <motion.p
                 key={gloss}
@@ -46,7 +46,7 @@ const TranslationBox = ({ gloss, translation, isTranslating, error, onSpeak }) =
         {hasTranslation ? (
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Translation</span>
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Natural Sentence</span>
               <button
                 onClick={() => onSpeak?.(translation)}
                 className="p-2 rounded-full bg-bg-card hover:bg-bg-card/80 text-text-main transition-colors cursor-pointer group/btn"

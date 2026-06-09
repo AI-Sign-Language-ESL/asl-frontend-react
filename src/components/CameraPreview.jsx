@@ -1,10 +1,9 @@
-import React, { forwardRef, useState, useEffect } from 'react';
+import React, { forwardRef, useState, useEffect, useRef, useImperativeHandle } from 'react';
 import { motion } from 'framer-motion';
-import Webcam from 'react-webcam';
 import { Camera, ChevronDown } from 'lucide-react';
 import classNames from 'classnames';
 
-const CameraPreview = forwardRef(({ 
+const CameraPreview = React.memo(forwardRef(({ 
   cameraState, // 'off', 'ready', 'collecting', 'predicting', 'active', 'stopped'
   error, 
   onToggleCamera, 
@@ -36,11 +35,132 @@ const CameraPreview = forwardRef(({
     loadDevices();
   }, []);
 
-  const videoConstraints = selectedDeviceId
-    ? { deviceId: { exact: selectedDeviceId }, width: 1280, height: 720 }
-    : { width: 1280, height: 720 };
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const isInitializingRef = useRef(false);
+
+  useImperativeHandle(ref, () => ({
+    get video() {
+      return videoRef.current;
+    }
+  }));
 
   const isActive = cameraState !== 'off';
+
+  useEffect(() => {
+    let active = true;
+
+    const startCamera = async () => {
+      if (!isActive) {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+          if (videoRef.current) {
+            videoRef.current.srcObject = null;
+          }
+        }
+        return;
+      }
+
+      if (isActive) {
+        if (streamRef.current) return;
+        if (isInitializingRef.current) return;
+
+        isInitializingRef.current = true;
+
+        try {
+          let stream;
+          const constraintsList = [
+            { width: { ideal: 1920 }, height: { ideal: 1080 } },
+            { width: { ideal: 1280 }, height: { ideal: 720 } },
+            { width: { ideal: 640 }, height: { ideal: 480 } },
+            true // default fallback
+          ];
+
+          for (let i = 0; i < constraintsList.length; i++) {
+            try {
+              const videoConstraints = constraintsList[i] === true 
+                ? true 
+                : { ...(selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : {}), ...constraintsList[i] };
+              
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: videoConstraints,
+                audio: false
+              });
+              break; // Success!
+            } catch (err) {
+              if (i === constraintsList.length - 1) {
+                throw err; // Re-throw if the last attempt fails
+              }
+              console.warn(`[CameraPreview] Failed with constraints index ${i}, falling back...`, err);
+            }
+          }
+
+          if (!active) {
+            stream.getTracks().forEach(track => track.stop());
+            isInitializingRef.current = false;
+            return;
+          }
+
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+
+          const track = stream.getVideoTracks()[0];
+          if (track) {
+            const settings = track.getSettings();
+            console.log(`[CameraPreview] Camera initialized at ${settings.width}x${settings.height} @ ${settings.frameRate}fps. readyState: ${track.readyState}`);
+            
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+              console.log("[CameraPreview] Available devices:", devices);
+            });
+          }
+
+          if (onUserMedia) onUserMedia();
+
+        } catch (err) {
+          console.error("[CameraPreview] Camera startup failed:", err);
+          
+          let friendlyMessage = "Unknown error occurred while accessing the camera.";
+          if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+            friendlyMessage = "Camera access denied. Please allow permissions in your browser.";
+          } else if (err.name === "NotFoundError") {
+            friendlyMessage = "No camera found on this device.";
+          } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+            friendlyMessage = "Camera is in use by another application or tab.";
+          } else if (err.name === "OverconstrainedError") {
+            friendlyMessage = "Camera does not support the requested resolution.";
+          } else if (err.name === "AbortError") {
+            friendlyMessage = "Camera initialization was aborted.";
+          }
+
+          if (active && onUserMediaError) {
+            onUserMediaError(`${friendlyMessage} (${err.name}: ${err.message})`);
+          }
+        } finally {
+          isInitializingRef.current = false;
+        }
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      active = false;
+    };
+  }, [isActive, selectedDeviceId]); // intentionally omitting callbacks to prevent re-runs
+
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
   const isTranslationActive = ['collecting', 'predicting', 'active'].includes(cameraState);
 
   const getStatusDisplay = () => {
@@ -151,14 +271,13 @@ const CameraPreview = forwardRef(({
 
         {isActive ? (
           <>
-            <Webcam
-              ref={ref}
-              audio={false}
-              videoConstraints={videoConstraints}
-              onUserMedia={onUserMedia}
-              onUserMediaError={onUserMediaError}
-              className="w-full h-full object-cover opacity-80"
-              mirrored={true}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover opacity-80 scale-x-[-1]"
+              style={{ objectFit: 'cover' }}
             />
             <motion.div
               animate={{ y: ['-100%', '100%'] }}
@@ -179,8 +298,9 @@ const CameraPreview = forwardRef(({
       </div>
     </div>
   );
-});
+}));
 
 CameraPreview.displayName = 'CameraPreview';
 
 export default CameraPreview;
+
