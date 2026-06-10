@@ -24,7 +24,7 @@ const TABS = ['Transcript', 'Gloss', 'Avatar'];
 
 const YoutubeIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M23.498 6.186a3.01 3.01 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.01 3.01 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.01 3.01 0 0 0 2.122 2.136c1.871.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.01 3.01 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    <path d="M23.498 6.186a3.01 3.01 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.01 3.01 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.01 3.01 0 0 0 2.122 2.136c1.871.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.01 3.01 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
   </svg>
 );
 
@@ -211,7 +211,7 @@ const YouTubeTranslate = () => {
   const playAnimations = (animations) => {
     if (!animations || animations.length === 0) return;
     console.log("Unity Ready:", unityReady, "Sending message:", animations);
-    sendMessage("tpose", "ReceiveAnimations", JSON.stringify(animations));
+    sendMessage("hope", "ReceiveAnimations", JSON.stringify(animations));
   };
 
   const handleReplay = () => {
@@ -571,13 +571,12 @@ const YouTubeTranslate = () => {
               <div className="w-full max-w-md space-y-4">
                 {UPLOAD_STAGES.map((stage, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                      i < processingStepIndex
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${i < processingStepIndex
                         ? 'bg-success/20 text-success'
                         : i === processingStepIndex
                           ? 'bg-primary/20 text-primary'
                           : 'bg-white/5 text-text-muted'
-                    }`}>
+                      }`}>
                       {i < processingStepIndex ? (
                         <CheckCircle2 className="w-4 h-4" />
                       ) : i === processingStepIndex ? (
@@ -586,9 +585,8 @@ const YouTubeTranslate = () => {
                         <span className="text-xs font-bold">{i + 1}</span>
                       )}
                     </div>
-                    <span className={`text-sm ${
-                      i <= processingStepIndex ? 'text-text-main font-medium' : 'text-text-muted'
-                    }`}>
+                    <span className={`text-sm ${i <= processingStepIndex ? 'text-text-main font-medium' : 'text-text-muted'
+                      }`}>
                       {stage}
                     </span>
                   </div>
@@ -624,11 +622,10 @@ const YouTubeTranslate = () => {
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                        activeTab === tab
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === tab
                           ? 'bg-primary/20 text-primary shadow-sm'
                           : 'text-text-muted hover:text-text-main hover:bg-white/5'
-                      }`}
+                        }`}
                     >
                       {tab}
                     </button>

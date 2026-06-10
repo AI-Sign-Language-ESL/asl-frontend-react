@@ -51,16 +51,16 @@ const Generator = () => {
         setUnitySource(data.source || 'django');
 
         console.log(
-            "Unity Ready:", unityReady,
-            "Sending message:", data.animations
+          "Unity Ready:", unityReady,
+          "Sending message:", data.animations
         );
 
         sendMessage(
-            "tpose",
-            "ReceiveAnimations",
-            JSON.stringify(
-                data.animations
-            )
+          "hope",
+          "ReceiveAnimations",
+          JSON.stringify(
+            data.animations
+          )
         );
       }
 
