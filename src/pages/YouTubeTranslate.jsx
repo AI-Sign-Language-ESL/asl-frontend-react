@@ -211,7 +211,7 @@ const YouTubeTranslate = () => {
   const playAnimations = (animations) => {
     if (!animations || animations.length === 0) return;
     console.log("Unity Ready:", unityReady, "Sending message:", animations);
-    sendMessage("hope", "ReceiveAnimations", JSON.stringify(animations));
+    sendMessage("hope", "ReceiveAnimations", JSON.stringify(animations.map(a => typeof a === 'string' ? a.trim() : a)));
   };
 
   const handleReplay = () => {

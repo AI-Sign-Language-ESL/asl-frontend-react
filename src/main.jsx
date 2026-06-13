@@ -1,5 +1,4 @@
 import React from 'react'
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import './index.css'
@@ -15,15 +14,13 @@ const googleClientId =
   ''
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <ThemeProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <GoogleOAuthProvider clientId={googleClientId}>
-            <App />
-          </GoogleOAuthProvider>
-        </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </StrictMode>,
+  <ThemeProvider>
+    <AuthProvider>
+      <NotificationProvider>
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <App />
+        </GoogleOAuthProvider>
+      </NotificationProvider>
+    </AuthProvider>
+  </ThemeProvider>,
 )

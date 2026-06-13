@@ -59,7 +59,7 @@ const Generator = () => {
           "hope",
           "ReceiveAnimations",
           JSON.stringify(
-            data.animations
+            data.animations.map(a => typeof a === 'string' ? a.trim() : a)
           )
         );
       }

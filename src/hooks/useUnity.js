@@ -157,8 +157,18 @@ export function useUnity(iframeRef) {
     return () => {
       console.log('[useUnity] 🗑️ Removing window "message" listener');
       window.removeEventListener('message', handleMessage);
+      
+      // Attempt graceful shutdown of Unity
+      try {
+        if (iframeRef?.current?.contentWindow) {
+          console.log('[useUnity] 🛑 Sending quitUnity signal to iframe');
+          iframeRef.current.contentWindow.postMessage({ type: 'quitUnity' }, '*');
+        }
+      } catch (err) {
+        console.warn('[useUnity] Could not send quitUnity:', err);
+      }
     };
-  }, []); // intentionally empty — we only register once
+  }, [iframeRef]);
 
   // When unityReady transitions to true, flush the pending queue.
   // NOTE: We intentionally do NOT include sendMessage in deps because we
