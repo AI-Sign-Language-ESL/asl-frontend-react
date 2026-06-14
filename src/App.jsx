@@ -28,6 +28,7 @@ import PaymentCheckout from './pages/PaymentCheckout';
 import SignTranslationPage from './pages/SignTranslationPage';
 import HttpTranslationPage from './pages/HttpTranslationPage';
 import TestTranslation from './pages/TestTranslation';
+import SignRecognitionPage from './pages/SignRecognitionPage';
 
 import { useAuth } from './context/AuthContext';
 
@@ -86,6 +87,14 @@ const AnimatedRoutes = () => {
             element={
               <ProtectedRoute>
                 <HttpTranslationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sign-recognition"
+            element={
+              <ProtectedRoute>
+                <SignRecognitionPage />
               </ProtectedRoute>
             }
           />
