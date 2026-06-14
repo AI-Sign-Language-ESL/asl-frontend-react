@@ -88,28 +88,24 @@ const SignTranslationPage = () => {
       wsRef.current = new TranslationWebSocket();
       
       wsRef.current.on('gloss_received', (data) => {
-        setGloss(data.gloss);
+        // Handled in translation_received to avoid overwriting accumulated string
       });
       
       wsRef.current.on('translation_received', (data) => {
         if (data.gloss === 'NO_SIGN') {
-          setTranslation('No Sign Detected');
-          setGloss('');
+          setTranslation(prev => prev || 'No Sign Detected');
         } else {
-          setTranslation(data.text);
+          setGloss(prev => (!prev || prev === 'NO_SIGN') ? data.gloss : `${prev} ${data.gloss}`);
+          setTranslation(prev => (!prev || prev === 'No Sign Detected') ? data.text : `${prev} ${data.text}`);
           addToHistory(data.gloss, data.text);
           speak(data.text);
         }
-        clearBuffer();
-        framesSinceLastPredict.current = 0;
         isAwaitingPredictionRef.current = false;
         setCameraState(prev => (prev !== 'off' && prev !== 'stopped') ? 'collecting' : prev);
       });
       
       wsRef.current.on('translation_error', (data) => {
         setError(data.message || data.error || 'Translation pipeline error');
-        clearBuffer();
-        framesSinceLastPredict.current = 0;
         isAwaitingPredictionRef.current = false;
         setCameraState(prev => (prev !== 'off' && prev !== 'stopped') ? 'collecting' : prev);
       });
@@ -119,7 +115,7 @@ const SignTranslationPage = () => {
       wsRef.current.on('connected', () => {
         wsSentStartRef.current = true;
         isAwaitingPredictionRef.current = false;
-        framesSinceLastPredict.current = 0;
+        framesSinceLastPredict.current = 15;
         wsRef.current.send({ action: "start", output_type: "text" });
 
         if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
@@ -230,12 +226,14 @@ const SignTranslationPage = () => {
     
     if (result && isTranslationActiveRef.current) {
       const { sequence, length } = result;
+      framesSinceLastPredict.current += 1;
 
       if (length < 96) {
         setCameraState(prev => (prev !== 'off' && prev !== 'collecting') ? 'collecting' : prev);
       } else if (sequence && sequence.length === 96) {
-        if (!isAwaitingPredictionRef.current) {
+        if (!isAwaitingPredictionRef.current && framesSinceLastPredict.current >= 15) {
           isAwaitingPredictionRef.current = true;
+          framesSinceLastPredict.current = 0;
           setCameraState(prev => (prev !== 'off' && prev !== 'stopped') ? 'predicting' : prev);
           sendSequenceToModal(sequence);
         }

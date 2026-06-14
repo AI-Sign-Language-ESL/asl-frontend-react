@@ -171,7 +171,6 @@ const HttpTranslationPage = () => {
       setError(errMsg);
       toast.error(`Prediction failed: ${errMsg}`);
     } finally {
-      clearBuffer();
       setFrameCount(0);
       
       if (isTranslationActiveRef.current) {
