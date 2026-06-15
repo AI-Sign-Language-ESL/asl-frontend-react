@@ -6,8 +6,6 @@
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteCond %{REQUEST_URI} !^/api/ [NC]
-  RewriteCond %{REQUEST_URI} !^/admin/ [NC]
   RewriteCond %{REQUEST_URI} !\.(wasm|wasm\.gz|js|js\.gz|css|data|data\.gz|unityweb|json|png|jpg|jpeg|gif|ico|svg)$ [NC]
   RewriteRule . /index.html [L]
 </IfModule>
