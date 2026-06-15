@@ -177,7 +177,7 @@ npm install
 
 4. Create `.env` file at the root of the project:
 ```env
-VITE_API_URL=http://localhost:8000/api
+VITE_API_URL=http://localhost:8000
 ```
 
 5. Run development server
