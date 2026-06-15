@@ -29,12 +29,34 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  console.log('[Axios Request]', {
+    url: `${config.baseURL || ''}${config.url}`,
+    method: config.method,
+    payload: config.data,
+  });
+  
   return config;
 });
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    console.log('[Axios Response Success]', {
+      url: res.config.url,
+      status: res.status,
+    });
+    return res;
+  },
   async (err) => {
+    console.error('[Axios Error]', {
+      message: err.message,
+      url: err.config?.url,
+      status: err.response?.status,
+      response: err.response,
+      request: err.request,
+      fullError: err
+    });
+    
     const originalRequest = err.config;
 
     // Fast fail for rate limiting, UI will handle 429
