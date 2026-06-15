@@ -72,16 +72,79 @@ This application allows for:
 ```text
 src/
 ├── api/
+├── assets/
+│   ├── hand-animation.json
+│   ├── hero.png
+│   ├── react.svg
+│   ├── tafahom-hero.jpg
+│   └── vite.svg
 ├── components/
-├── pages/
-├── routes/
+│   ├── CameraPreview.jsx
+│   ├── ErrorBoundary.jsx
+│   ├── FehmBot.jsx
+│   ├── GoogleLoginButton.jsx
+│   ├── Layout.jsx
+│   ├── Navbar.jsx
+│   ├── NotificationBell.jsx
+│   ├── ParticlesBackground.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── TranscriptErrorBoundary.jsx
+│   ├── TranscriptPreview.jsx
+│   ├── TranslationBox.jsx
+│   └── TranslationHistory.jsx
+├── context/
+│   ├── AuthContext.jsx
+│   ├── NotificationContext.jsx
+│   └── ThemeContext.jsx
 ├── hooks/
+│   ├── useAudioRecorder.js
+│   ├── useMediaPipe.js
+│   ├── useSpeechToText.js
+│   ├── useUnity.js
+│   └── useYoutubeTranscript.js
+├── locales/
+│   ├── ar.json
+│   └── en.json
+├── pages/
+│   ├── AdminDashboard.jsx
+│   ├── AdminLogin.jsx
+│   ├── Dataset.jsx
+│   ├── Generator.jsx
+│   ├── Home.jsx
+│   ├── HttpTranslationPage.jsx
+│   ├── Login.jsx
+│   ├── ManagePlan.jsx
+│   ├── Meeting.jsx
+│   ├── MyContributions.jsx
+│   ├── OrgAdminLogin.jsx
+│   ├── OrganizationAdmin.jsx
+│   ├── PaymentCheckout.jsx
+│   ├── Pricing.jsx
+│   ├── Settings.jsx
+│   ├── SignRecognitionPage.jsx
+│   ├── SignTranslationPage.jsx
+│   ├── Splash.jsx
+│   ├── SupervisorDashboard.jsx
+│   ├── SupervisorLogin.jsx
+│   ├── TestTranslation.jsx
+│   ├── Translator.jsx
+│   └── YouTubeTranslate.jsx
+├── routes/
 ├── services/
+│   ├── api.js
+│   ├── authService.js
+│   ├── translationWebSocket.js
+│   └── youtubeTranscriptService.js
 ├── store/
 ├── types/
 ├── utils/
-├── assets/
-└── App.tsx
+│   ├── errorHandler.js
+│   └── tts.js
+├── App.css
+├── App.jsx
+├── i18n.js
+├── index.css
+└── main.jsx
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
