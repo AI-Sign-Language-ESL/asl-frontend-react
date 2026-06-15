@@ -13,7 +13,8 @@ export const NotificationProvider = ({ children }) => {
     if (!isAuthenticated) return;
     try {
       const res = await notificationService.list();
-      setNotifications(res.data);
+      const data = res.data;
+      setNotifications(Array.isArray(data) ? data : (data.results || data.data || []));
     } catch (err) {
       console.error('Failed to load notifications', err);
     } finally {
