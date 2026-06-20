@@ -248,24 +248,6 @@ Ensure that all variables from `.env` (like `VITE_API_URL`) are properly configu
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Screenshots 📸
-
-### Landing Page
-*(Insert Landing Page Screenshot Here)*
-
-### Translation Dashboard
-*(Insert Translation Dashboard Screenshot Here)*
-
-### Live Recognition
-*(Insert Live Recognition Screenshot Here)*
-
-### Meeting Room
-*(Insert Meeting Room Screenshot Here)*
-
-### AI Assistant
-*(Insert AI Assistant Screenshot Here)*
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contributing 👥
 
